@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+ai-service/models/
+
+# Node
+node_modules/
+
+# Env
+.env
+venv
