@@ -93,13 +93,11 @@ Model sử dụng: ArcFace (ResNet-50, 512-dim)
 * Truy cập:
 https://github.com/deepinsight/insightface/releases
 
-* Tải file:
-- `buffalo_l.zip`
+* Tải file: `buffalo_l.zip`
 
-* Giải nén, lấy file:
-- `w600k_r50.onnx`
+* Giải nén, lấy file: `w600k_r50.onnx`
 
-* Đổi tên thành: arcface.onnx
+* Đổi tên thành: `arcface.onnx`
 
 ---
 
@@ -108,8 +106,7 @@ https://github.com/deepinsight/insightface/releases
 * Truy cập:
 https://github.com/opencv/opencv/blob/master/data/haarcascades
 
-* Tải file:
-- `haarcascade_frontalface_default.xml`
+* Tải file: `haarcascade_frontalface_default.xml`
 
 ---
 
@@ -118,23 +115,25 @@ https://github.com/opencv/opencv/blob/master/data/haarcascades
 * Truy cập:
 https://github.com/kurnianggoro/GSOC2017/tree/master/data
 
-* Tải file:
-- `lbfmodel.yaml`
+* Tải file: `lbfmodel.yaml`
 
 ---
 #### Lưu ý: Phải thực hiện đầy đủ các bước trên để tránh lỗi khi chạy
 
 #### Sau khi hoàn tất, cấu trúc thư mục như sau:
+
+```
 ai-service/
 │
 ├── models/
 │ ├── arcface.onnx
 │ ├── haarcascade_frontalface_default.xml
 │ └── lbfmodel.yaml
+```
 
 ---
 
-## Cấu hình Backend (.env)
+### Cấu hình Backend (.env)
 
 Tạo file `.env` trong thư mục `backend`:
 
@@ -144,7 +143,7 @@ Tạo file `.env` trong thư mục `backend`:
 
 ---
 
-## Cấu hình Camera (Realtime)
+### Cấu hình Camera (Realtime)
 
 Sử dụng điện thoại làm camera:
 
@@ -158,7 +157,7 @@ http://192.168.x.x:8080/video
 
 4. Lưu URL này vào hệ thống (cameraUrl của lớp học)
 
-### Điều kiện:
+#### Điều kiện:
 
 * Điện thoại và máy tính cùng WiFi
 * Truy cập URL trên máy tính phải xem được video
@@ -167,7 +166,7 @@ http://192.168.x.x:8080/video
 
 ## 2. Chạy Frontend + Backend cùng lúc
 
-### Quan trọng: chạy lệnh này tại thư mục gốc (face-attendance-system)
+### Quan trọng: Chạy lệnh này tại thư mục gốc (face-attendance-system)
 ```bash
 npm run dev
 ```
@@ -194,7 +193,7 @@ Chạy AI service:
 uvicorn main:app --reload --port 8000
 ```
 
-AI service: http://localhost:8000
+* AI service: http://localhost:8000
 
 ---
 
@@ -204,7 +203,7 @@ AI service: http://localhost:8000
 2. Thêm sinh viên + upload ảnh (tạo embedding)
 3. Cấu hình camera URL
 4. Tạo phiên học (session)
-5. Nhấn **Bắt đầu** → hệ thống chạy AI realtime
+5. Nhấn **Bắt đầu** => hệ thống chạy AI realtime
 6. Nhấn **Kết thúc** để dừng
 
 ---
