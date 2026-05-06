@@ -1,8 +1,17 @@
 const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+const ExcelJS = require("exceljs");
 const Session = require("../models/session");
 const Class = require("../models/class");
 const Attendance = require("../models/attendance");
 const { runInTransaction } = require("../utils/runInTransaction");
+const {
+    getSessionAttendanceData,
+    fillAttendanceWorksheet,
+    formatSessionDate,
+    buildAttendanceExportFileName,
+} = require("../services/sessionAttendanceService");
 
 const getDetailSession = async (req, res) => {
     const { sessionId } = req.params;
@@ -272,10 +281,73 @@ const deleteSession = async (req, res) => {
     }
 };
 
+const exportSessionAttendance = async (req, res) => {
+    const { sessionId } = req.params;
+    const { id } = req.user;
+
+    try {
+        const attendanceData = await getSessionAttendanceData({
+            sessionId,
+            lecturerId: id,
+        });
+        const templatePath = path.join(__dirname, "..", "templates", "attendance-template.xlsx");
+
+        if (!fs.existsSync(templatePath)) {
+            return res.status(500).json({
+                success: false,
+                message: "Lỗi máy chủ khi xuất danh sách điểm danh của sinh viên",
+            });
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.readFile(templatePath);
+
+        const worksheet = workbook.worksheets[0];
+
+        if (!worksheet) {
+            return res.status(500).json({
+                success: false,
+                message: "File mẫu Excel không có worksheet hợp lệ",
+            });
+        }
+
+        fillAttendanceWorksheet({
+            worksheet,
+            rows: attendanceData.rows,
+            studentCount: attendanceData.studentCount,
+            className: attendanceData.classData?.name || "",
+            sessionName: attendanceData.session.name || "",
+            sessionDateText: formatSessionDate(attendanceData.session.startTime),
+        });
+
+        const fileName = buildAttendanceExportFileName(attendanceData.session.name);
+        const encodedFileName = encodeURIComponent(fileName);
+
+        res.setHeader(
+            "Content-Type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+            "Content-Disposition",
+            `attachment; filename="attendance-export.xlsx"; filename*=UTF-8''${encodedFileName}`
+        );
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "Lỗi máy chủ khi xuất danh sách điểm danh",
+        });
+    }
+};
+
 module.exports = {
     getDetailSession,
     createSession,
     updateSession,
     updateSessionStatus,
     deleteSession,
+    exportSessionAttendance,
 };

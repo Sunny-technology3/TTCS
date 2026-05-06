@@ -1,12 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const {
-    getDetailSession,
+    getDetailSession, exportSessionAttendance,
     createSession, updateSession, updateSessionStatus, deleteSession,
 } = require("../controllers/sessionController");
 const { verifyToken } = require("../middleware/verifyToken");
 
 router.get("/:sessionId", verifyToken, getDetailSession);
+
+router.get("/:sessionId/export-attendance", verifyToken, exportSessionAttendance);
 
 router.post("/", verifyToken, createSession);
 

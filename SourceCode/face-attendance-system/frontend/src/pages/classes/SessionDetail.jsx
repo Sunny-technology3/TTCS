@@ -1,5 +1,5 @@
 import { Table, Typography, Breadcrumb, Spin, message, Button, Tooltip, Space, Tag } from 'antd';
-import { ReloadOutlined, PlayCircleOutlined, StopOutlined, CheckOutlined } from '@ant-design/icons';
+import { ReloadOutlined, PlayCircleOutlined, StopOutlined, CheckOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import attendanceApi from '../../api/attendanceApi';
@@ -28,6 +28,7 @@ function SessionDetail() {
     const [classData, setClassData] = useState(null);
     const [sessionData, setSessionData] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     useEffect(() => {
         const fetchClassData = async () => {
@@ -136,6 +137,53 @@ function SessionDetail() {
         } catch (error) {
             console.log(error);
             message.error(error?.response?.data?.message || "Có lỗi xảy ra");
+        }
+    };
+
+    const getDownloadFileName = (contentDisposition) => {
+        if (!contentDisposition) {
+            return `Kết quả điểm danh - ${sessionData?.name || sessionId}.xlsx`;
+        }
+
+        const encodedFileNameMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+
+        if (encodedFileNameMatch?.[1]) {
+            return decodeURIComponent(encodedFileNameMatch[1]);
+        }
+
+        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+
+        return fileNameMatch?.[1] || `Kết quả điểm danh - ${sessionData?.name || sessionId}.xlsx`;
+    };
+
+    const handleExportAttendance = async () => {
+        setExporting(true);
+
+        try {
+            const response = await sessionApi.exportAttendanceSession(sessionId);
+            const blob = new Blob(
+                [response.data],
+                {
+                    type: response.headers["content-type"]
+                        || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                }
+            );
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+
+            link.href = downloadUrl;
+            link.download = getDownloadFileName(response.headers["content-disposition"]);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(downloadUrl);
+
+            message.success("Xuất danh sách điểm danh thành công");
+        } catch (error) {
+            console.log(error);
+            message.error(error?.response?.data?.message || "Xuất danh sách điểm danh thất bại");
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -263,6 +311,16 @@ function SessionDetail() {
                                 onClick={handleMarkAll}
                             >
                                 Điểm danh tất cả
+                            </Button>
+                        </Tooltip>
+
+                        <Tooltip title="Xuất Excel">
+                            <Button
+                                icon={<DownloadOutlined />}
+                                onClick={handleExportAttendance}
+                                loading={exporting}
+                            >
+                                Xuất Excel
                             </Button>
                         </Tooltip>
 

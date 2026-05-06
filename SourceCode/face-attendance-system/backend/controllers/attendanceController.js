@@ -4,6 +4,7 @@ const Session = require("../models/session");
 const FaceEmbedding = require("../models/faceEmbedding");
 const Class = require("../models/class");
 const Student = require("../models/student");
+const { getSessionAttendanceData } = require("../services/sessionAttendanceService");
 
 const autoCheckIn = async (req, res) => {
     const { classId } = req.query;
@@ -76,32 +77,24 @@ const autoCheckIn = async (req, res) => {
 
 const getAttendanceBySession = async (req, res) => {
     const { classId, sessionId } = req.query;
+    const { id } = req.user;
 
     try {
-        const students = await Student.find({ classId });
-
-        const attendances = await Attendance.find({ sessionId });
-
-        const attendanceMap = {};
-        attendances.forEach((att) => {
-            attendanceMap[att.studentId.toString()] = att;
-        });
-
-        const result = students.map((student) => {
-            const att = attendanceMap[student._id.toString()];
-
-            return {
-                _id: student._id,
-                fullName: student.fullName,
-                studentId: student.studentId,
-                checkIn: att?.checkIn || null,
-                status: att?.status || "absent",
-            };
+        const attendanceData = await getSessionAttendanceData({
+            sessionId,
+            lecturerId: id,
+            classId,
         });
 
         return res.status(200).json({
             success: true,
-            data: result,
+            data: attendanceData.rows.map((row) => ({
+                _id: row._id,
+                fullName: row.fullName,
+                studentId: row.studentId,
+                checkIn: row.checkIn,
+                status: row.status,
+            })),
         });
     } catch (error) {
         console.log(error);
