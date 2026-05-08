@@ -1,7 +1,10 @@
 import cv2
 
 def augment_images(img):
-    images = [img]
+    images = []
+
+    # Ảnh gốc
+    images.append(img)
 
     # Flip ngang
     flip = cv2.flip(img, 1)

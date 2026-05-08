@@ -100,7 +100,7 @@ function StudentTab({ students, classId, onStudentChange }) {
             align: 'center',
             width: 100,
             render: (value) => (
-                <span style={{ color: 'green', fontWeight: 'bold' }}>{value}</span>
+                <span style={{ color: 'green', fontWeight: 'bold' }}>{value || 0}</span>
             )
         },
         {
@@ -109,7 +109,7 @@ function StudentTab({ students, classId, onStudentChange }) {
             align: 'center',
             width: 100,
             render: (value) => (
-                <span style={{ color: 'orange', fontWeight: 'bold' }}>{value}</span>
+                <span style={{ color: 'orange', fontWeight: 'bold' }}>{value || 0}</span>
             )
         },
         {
@@ -118,7 +118,7 @@ function StudentTab({ students, classId, onStudentChange }) {
             align: 'center',
             width: 100,
             render: (value) => (
-                <span style={{ color: 'red', fontWeight: 'bold' }}>{value}</span>
+                <span style={{ color: 'red', fontWeight: 'bold' }}>{value || 0}</span>
             )
         },
         {

@@ -36,7 +36,17 @@ def preprocess(img):
     img = np.transpose(img, (2, 0, 1))
     return np.expand_dims(img, axis=0)
 
-def extract_embedding(img):
+def extract_embedding(image_bytes):
+    img_array = np.frombuffer(
+        image_bytes,
+        np.uint8
+    )
+
+    img = cv2.imdecode(
+        img_array,
+        cv2.IMREAD_COLOR
+    )
+
     augmented_images = augment_images(img)
 
     embeddings = []

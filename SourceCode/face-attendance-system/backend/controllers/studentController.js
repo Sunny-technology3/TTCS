@@ -65,6 +65,10 @@ const createStudent = asyncHandler(async (req, res) => {
                 { headers: formData.getHeaders() }
             );
 
+            if (!aiRes.data.success) {
+                throw new AppError(400, aiRes.data.message || "Lỗi máy chủ khi tạo embedding");
+            }
+
             const embedding = aiRes.data.data.embedding;
 
             await FaceEmbedding.create(
