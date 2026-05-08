@@ -4,9 +4,19 @@ const Session = require("../models/session");
 const FaceEmbedding = require("../models/faceEmbedding");
 const Class = require("../models/class");
 const Student = require("../models/student");
-const { getSessionAttendanceData } = require("../services/sessionAttendanceService");
+const {
+    getSessionAttendanceData,
+    getClassAttendanceData,
+} = require("../services/attendance/attendanceService");
+const {
+    buildSessionAttendanceWorkbook,
+} = require("../services/attendance/sessionAttendanceExportService");
+const {
+    buildClassAttendanceWorkbook
+} = require("../services/attendance/classAttendanceExportService");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/appError");
+const { sendExcelWorkbook } = require("../utils/excel");
 
 const autoCheckIn = asyncHandler(async (req, res) => {
     const { classId } = req.query;
@@ -181,9 +191,54 @@ const markAllPresent = asyncHandler(async (req, res) => {
     });
 });
 
+const exportAttendanceBySession = asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { id } = req.user;
+
+    const attendanceData = await getSessionAttendanceData({
+        sessionId,
+        lecturerId: id,
+    });
+
+    const workbook = await buildSessionAttendanceWorkbook(
+        attendanceData
+    );
+
+    await sendExcelWorkbook({
+        res,
+        workbook,
+        fileName: `Kết quả điểm danh - ${attendanceData.session.name || "Phiên học"}.xlsx`,
+    });
+});
+
+const exportAttendanceByClass = asyncHandler(async (req, res) => {
+    const { classId } = req.params;
+    const { id } = req.user;
+
+    const data = await getClassAttendanceData({
+        classId,
+        lecturerId: id,
+    });
+
+    const workbook = await buildClassAttendanceWorkbook({
+        classData: data.classData,
+        sessions: data.sessions,
+        students: data.students,
+        attendanceMap: data.attendanceMap,
+    });
+
+    await sendExcelWorkbook({
+        res,
+        workbook,
+        fileName: `Kết quả điểm danh - ${data.classData.name}.xlsx`,
+    });
+});
+
 module.exports = {
     autoCheckIn,
     getAttendanceBySession,
     updateAttendanceStatus,
     markAllPresent,
+    exportAttendanceBySession,
+    exportAttendanceByClass,
 };

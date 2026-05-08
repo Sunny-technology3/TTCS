@@ -17,12 +17,6 @@ const sessionApi = {
         return axiosClient.put(`/sessions/${sessionId}/status`, { status });
     },
 
-    exportAttendanceSession: (sessionId) => {
-        return axiosClient.get(`/sessions/${sessionId}/export-attendance`, {
-            responseType: "blob",
-        });
-    },
-
     deleteSession: (sessionId) => {
         return axiosClient.delete(`/sessions/${sessionId}`);
     },

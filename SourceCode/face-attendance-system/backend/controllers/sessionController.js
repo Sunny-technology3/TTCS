@@ -6,12 +6,6 @@ const Session = require("../models/session");
 const Class = require("../models/class");
 const Attendance = require("../models/attendance");
 const { runInTransaction } = require("../utils/runInTransaction");
-const {
-    getSessionAttendanceData,
-    fillAttendanceWorksheet,
-    formatSessionDate,
-    buildAttendanceExportFileName,
-} = require("../services/sessionAttendanceService");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/appError");
 
@@ -197,59 +191,10 @@ const deleteSession = asyncHandler(async (req, res) => {
     });
 });
 
-const exportSessionAttendance = asyncHandler(async (req, res) => {
-    const { sessionId } = req.params;
-    const { id } = req.user;
-
-    const attendanceData = await getSessionAttendanceData({
-        sessionId,
-        lecturerId: id,
-    });
-    const templatePath = path.join(__dirname, "..", "templates", "attendance-template.xlsx");
-
-    if (!fs.existsSync(templatePath)) {
-        throw new AppError(500, "Lỗi máy chủ khi xuất kết quả điểm danh của sinh viên theo buổi học");
-    }
-
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(templatePath);
-
-    const worksheet = workbook.worksheets[0];
-
-    if (!worksheet) {
-        throw new AppError(500, "Lỗi máy chủ khi xuất kết quả điểm danh của sinh viên theo buổi học");
-    }
-
-    fillAttendanceWorksheet({
-        worksheet,
-        rows: attendanceData.rows,
-        studentCount: attendanceData.studentCount,
-        className: attendanceData.classData?.name || "",
-        sessionName: attendanceData.session.name || "",
-        sessionDateText: formatSessionDate(attendanceData.session.startTime),
-    });
-
-    const fileName = buildAttendanceExportFileName(attendanceData.session.name);
-    const encodedFileName = encodeURIComponent(fileName);
-
-    res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="attendance-export.xlsx"; filename*=UTF-8''${encodedFileName}`
-    );
-
-    await workbook.xlsx.write(res);
-    res.end();
-});
-
 module.exports = {
     getDetailSession,
     createSession,
     updateSession,
     updateSessionStatus,
     deleteSession,
-    exportSessionAttendance,
 };

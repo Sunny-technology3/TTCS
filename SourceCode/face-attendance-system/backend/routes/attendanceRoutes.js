@@ -5,6 +5,8 @@ const {
     getAttendanceBySession,
     updateAttendanceStatus,
     markAllPresent,
+    exportAttendanceBySession,
+    exportAttendanceByClass,
 } = require("../controllers/attendanceController");
 const { verifyToken } = require("../middleware/verifyToken");
 
@@ -15,5 +17,9 @@ router.get("/session", verifyToken, getAttendanceBySession);
 router.post("/mark-all", verifyToken, markAllPresent);
 
 router.post("/:sessionId/:studentId", verifyToken, updateAttendanceStatus);
+
+router.get("/export/session/:sessionId", verifyToken, exportAttendanceBySession);
+
+router.get("/export/class/:classId", verifyToken, exportAttendanceByClass);
 
 module.exports = router;

@@ -1,7 +1,8 @@
-const Session = require("../models/session");
-const Student = require("../models/student");
-const Attendance = require("../models/attendance");
-const AppError = require("../utils/appError");
+const Session = require("../../models/session");
+const Student = require("../../models/student");
+const Attendance = require("../../models/attendance");
+const Class = require("../../models/class");
+const AppError = require("../../utils/appError");
 
 const ATTENDANCE_STATUS_LABELS = {
     present: "Có mặt",
@@ -27,30 +28,7 @@ const formatCheckIn = (value) => {
     return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
-const formatSessionDate = (value) => {
-    if (!value) {
-        return "";
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return "";
-    }
-
-    const pad = (number) => String(number).padStart(2, "0");
-
-    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
-};
-
-const buildAttendanceExportFileName = (sessionName) => {
-    const normalizedSessionName = String(sessionName || "").trim();
-
-    return `Kết quả điểm danh - ${normalizedSessionName || "Phiên học"}.xlsx`;
-};
-
-const normalizeTemplateHeadingText = (value) => String(value || "").trim().toUpperCase();
-
+// Lấy kết quả điểm danh theo từng buổi học
 const getSessionAttendanceData = async ({
     sessionId,
     lecturerId,
@@ -106,49 +84,48 @@ const getSessionAttendanceData = async ({
     };
 };
 
-const fillAttendanceWorksheet = ({
-    worksheet,
-    rows,
-    studentCount,
-    className = "",
-    sessionName = "",
-    sessionDateText = "",
-    startRow = DEFAULT_START_ROW,
-}) => {
-    const sessionHeaderCell = worksheet.getCell(1, 1);
-    const normalizedClassName = normalizeTemplateHeadingText(className);
-    const normalizedSessionName = normalizeTemplateHeadingText(sessionName);
+// Lấy kết quả điểm danh theo từng lớp học
+const getClassAttendanceData = async ({ classId, lecturerId }) => {
+    const classData = await Class.findById(classId).lean();
 
-    if (typeof sessionHeaderCell.value === "string") {
-        sessionHeaderCell.value = sessionHeaderCell.value
-            .replaceAll("{className}", normalizedClassName)
-            .replaceAll("{sessionName}", normalizedSessionName)
-            .replaceAll("{sessionDate}", sessionDateText);
+    if (!classData) {
+        throw new AppError(404, "Không tìm thấy lớp học");
     }
 
-    const summaryCell = worksheet.getCell(3, 1);
+    if (lecturerId && String(classData.lecturerId) !== String(lecturerId)) {
+        throw new AppError(403, "Bạn không có quyền xem lớp học này");
+    }
 
-    summaryCell.value = `Danh sách gồm ${studentCount} sinh viên`;
-    summaryCell.alignment = {
-        ...(summaryCell.alignment || {}),
-        horizontal: "left",
+    const sessions = await Session.find({ classId })
+        .sort({ startTime: 1 })
+        .lean();
+
+    const students = await Student.find({ classId })
+        .sort({ studentId: 1 })
+        .lean();
+
+    const attendances = await Attendance.find({
+        sessionId: { $in: sessions.map(s => s._id) }
+    }).lean();
+
+    const attendanceMap = new Map();
+
+    for (const a of attendances) {
+        attendanceMap.set(
+            `${a.studentId}_${a.sessionId}`,
+            a
+        );
+    }
+
+    return {
+        classData,
+        sessions,
+        students,
+        attendanceMap,
     };
-
-    rows.forEach((row, index) => {
-        const worksheetRow = startRow + index;
-
-        worksheet.getCell(worksheetRow, 1).value = row.index;
-        worksheet.getCell(worksheetRow, 2).value = row.studentId;
-        worksheet.getCell(worksheetRow, 3).value = row.fullName;
-        worksheet.getCell(worksheetRow, 4).value = row.checkInText;
-        worksheet.getCell(worksheetRow, 5).value = row.statusText;
-    });
 };
 
 module.exports = {
     getSessionAttendanceData,
-    fillAttendanceWorksheet,
-    formatSessionDate,
-    buildAttendanceExportFileName,
-    normalizeTemplateHeadingText,
+    getClassAttendanceData,
 };

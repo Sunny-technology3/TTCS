@@ -17,6 +17,18 @@ const attendanceApi = {
     markAllPresent: (data) => {
         return axiosClient.post("/attendances/mark-all", data);
     },
+
+    exportAttendanceBySession: (sessionId) => {
+        return axiosClient.get(`/attendances/export/session/${sessionId}`, {
+            responseType: "blob",
+        });
+    },
+
+    exportAttendanceByClass: (classId) => {
+        return axiosClient.get(`/attendances/export/class/${classId}`, {
+            responseType: "blob",
+        });
+    },
 };
 
 export default attendanceApi;

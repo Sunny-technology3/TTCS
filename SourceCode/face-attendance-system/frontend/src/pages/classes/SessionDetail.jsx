@@ -160,7 +160,7 @@ function SessionDetail() {
         setExporting(true);
 
         try {
-            const response = await sessionApi.exportAttendanceSession(sessionId);
+            const response = await attendanceApi.exportAttendanceBySession(sessionId);
             const blob = new Blob(
                 [response.data],
                 {
