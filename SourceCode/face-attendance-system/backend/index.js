@@ -27,6 +27,9 @@ app.use("/api/students", StudentRoutes);
 const AttendanceRoutes = require("./routes/attendanceRoutes");
 app.use("/api/attendances", AttendanceRoutes);
 
+const errorHandler = require("./middleware/errorHandler");
+app.use(errorHandler);
+
 mongoose.connect(process.env.DB_URL)
     .then(() => {
         console.log("Successfully connected to MongoDB Atlas!");

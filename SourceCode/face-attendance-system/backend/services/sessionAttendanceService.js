@@ -1,6 +1,7 @@
 const Session = require("../models/session");
 const Student = require("../models/student");
 const Attendance = require("../models/attendance");
+const AppError = require("../utils/appError");
 
 const ATTENDANCE_STATUS_LABELS = {
     present: "Có mặt",
@@ -9,14 +10,6 @@ const ATTENDANCE_STATUS_LABELS = {
 };
 
 const DEFAULT_START_ROW = 5;
-
-class AppError extends Error {
-    constructor(statusCode, message) {
-        super(message);
-        this.name = "AppError";
-        this.statusCode = statusCode;
-    }
-}
 
 const formatCheckIn = (value) => {
     if (!value) {
@@ -153,7 +146,6 @@ const fillAttendanceWorksheet = ({
 };
 
 module.exports = {
-    AppError,
     getSessionAttendanceData,
     fillAttendanceWorksheet,
     formatSessionDate,
