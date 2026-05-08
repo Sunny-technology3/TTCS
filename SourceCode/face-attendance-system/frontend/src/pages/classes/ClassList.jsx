@@ -80,7 +80,7 @@ function ClassList() {
 
     } catch (error) {
       console.log(error);
-      message.error("Thao tác thất bại");
+      message.error(error?.response?.data?.message || "Thao tác thất bại");
     }
   };
 
@@ -207,7 +207,7 @@ function ClassList() {
             label="Tên lớp"
             rules={[{ required: true, message: "Vui lòng nhập tên lớp" }]}
           >
-            <Input placeholder="Nhập tên lớp học"/>
+            <Input placeholder="Nhập tên lớp học" />
           </Form.Item>
 
           <Form.Item

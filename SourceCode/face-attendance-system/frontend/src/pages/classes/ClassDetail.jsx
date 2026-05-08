@@ -5,7 +5,7 @@ import SessionTab from './features/SessionTab';
 import { useEffect, useState } from 'react';
 import classApi from '../../api/classApi';
 import attendanceApi from '../../api/attendanceApi';
-import { DownloadOutlined } from '@ant-design/icons';
+import { DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
 
@@ -16,22 +16,22 @@ function ClassDetail() {
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(false);
 
+    const fetchClassData = async () => {
+        setLoading(true);
+
+        try {
+            const res = await classApi.getDetailClass(classId);
+
+            setClassData(res.data.data);
+        } catch (error) {
+            message.error(error?.response?.data?.message || "Lỗi khi lấy thông tin lớp học");
+            console.log(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchClassData = async () => {
-            setLoading(true);
-
-            try {
-                const res = await classApi.getDetailClass(classId);
-
-                setClassData(res.data.data);
-            } catch (error) {
-                message.error(error?.response?.data?.message || "Lỗi khi lấy thông tin lớp học");
-                console.log(error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchClassData();
     }, [classId]);
 
@@ -119,20 +119,29 @@ function ClassDetail() {
             />
 
             <Spin spinning={loading}>
-                <Space style={{ marginTop: 10, width: '100%', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
                     <Title level={3} style={{ margin: 0 }}>
                         {classData?.name ? classData.name : "Đang tải..."}
                     </Title>
 
-                    <Button
-                        type="primary"
-                        icon={<DownloadOutlined />}
-                        loading={exporting}
-                        onClick={handleExportAttendance}
-                    >
-                        Xuất Excel điểm danh
-                    </Button>
-                </Space>
+                    <Space>
+                        <Button
+                            icon={<DownloadOutlined />}
+                            loading={exporting}
+                            onClick={handleExportAttendance}
+                        >
+                            Xuất Excel điểm danh
+                        </Button>
+
+                        <Button
+                            icon={<ReloadOutlined />}
+                            onClick={() => fetchClassData()}
+                            loading={loading}
+                        >
+                            Làm mới
+                        </Button>
+                    </Space>
+                </div>
 
                 {!classData ? null : (
                     <Tabs

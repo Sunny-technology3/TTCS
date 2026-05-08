@@ -1,4 +1,7 @@
 const AppError = require("../../utils/appError");
+const fs = require("fs");
+const path = require("path");
+const ExcelJS = require("exceljs");
 
 const ATTENDANCE_STATUS_LABELS = {
     present: "Có mặt",
@@ -65,6 +68,7 @@ const fillAttendanceWorksheet = ({
     const summaryCell = worksheet.getCell(3, 1);
 
     summaryCell.value = `Danh sách gồm ${studentCount} sinh viên`;
+    summaryCell.font = { italic: true };
     summaryCell.alignment = {
         ...(summaryCell.alignment || {}),
         horizontal: "left",
@@ -84,6 +88,7 @@ const fillAttendanceWorksheet = ({
 const buildSessionAttendanceWorkbook = async (attendanceData) => {
     const templatePath = path.join(
         __dirname,
+        "..",
         "..",
         "templates",
         "attendance-template.xlsx"

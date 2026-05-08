@@ -188,8 +188,8 @@ function SessionDetail() {
     };
 
     const columns = [
-        { title: 'Họ và tên', dataIndex: 'fullName' },
         { title: 'Mã sinh viên', dataIndex: 'studentId' },
+        { title: 'Họ và tên', dataIndex: 'fullName' },
         {
             title: 'Thời gian vào học',
             dataIndex: 'checkIn',

@@ -19,7 +19,7 @@ function StudentTab({ students, classId, onStudentChange }) {
     const openEdit = (record) => {
         setEditing(record);
         form.setFieldsValue({
-            name: record.name,
+            fullName: record.fullName,
             studentId: record.studentId,
         });
         setOpen(true);
@@ -176,19 +176,19 @@ function StudentTab({ students, classId, onStudentChange }) {
                     onFinish={handleSubmit}
                 >
                     <Form.Item
+                        name="studentId"
+                        label="Mã sinh viên"
+                        rules={[{ required: true, message: 'Vui lòng nhập mã sinh viên' }]}
+                    >
+                        <Input placeholder="Nhập mã sinh viên" />
+                    </Form.Item>
+
+                    <Form.Item
                         name="fullName"
                         label="Họ và tên"
                         rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
                     >
                         <Input placeholder="Nhập họ và tên sinh viên" />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="studentId"
-                        label="Mã sinh viên"
-                        rules={[{ required: true, message: 'Vui lòng nhập mã sinh viên' }]}
-                    >
-                        <Input placeholder="Nhập mã sinh viên (VD: 001, 002...)" />
                     </Form.Item>
 
                     {!editing && (
