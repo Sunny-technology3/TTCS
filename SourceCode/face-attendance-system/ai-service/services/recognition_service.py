@@ -6,7 +6,6 @@ THRESHOLD = 0.45
 def cosine_similarity(a, b):
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-
 def recognize_face(frame, embeddings):
     emb = get_embedding(frame)
 
