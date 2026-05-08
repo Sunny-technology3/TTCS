@@ -70,7 +70,7 @@ function StudentTab({ students, classId, onStudentChange }) {
         } catch (error) {
             console.log(error);
             message.error(error?.response?.data?.message || "Có lỗi xảy ra");
-        } finally{
+        } finally {
             setLoadingSubmit(false);
         }
     };
@@ -92,8 +92,35 @@ function StudentTab({ students, classId, onStudentChange }) {
     };
 
     const columns = [
-        { title: 'Họ và tên', dataIndex: 'fullName' },
         { title: 'Mã sinh viên', dataIndex: 'studentId' },
+        { title: 'Họ và tên', dataIndex: 'fullName' },
+        {
+            title: 'Có mặt',
+            dataIndex: ['stats', 'present'],
+            align: 'center',
+            width: 100,
+            render: (value) => (
+                <span style={{ color: 'green', fontWeight: 'bold' }}>{value}</span>
+            )
+        },
+        {
+            title: 'Đi muộn',
+            dataIndex: ['stats', 'late'],
+            align: 'center',
+            width: 100,
+            render: (value) => (
+                <span style={{ color: 'orange', fontWeight: 'bold' }}>{value}</span>
+            )
+        },
+        {
+            title: 'Vắng mặt',
+            dataIndex: ['stats', 'absent'],
+            align: 'center',
+            width: 100,
+            render: (value) => (
+                <span style={{ color: 'red', fontWeight: 'bold' }}>{value}</span>
+            )
+        },
         {
             title: 'Thao tác',
             align: 'left',

@@ -51,12 +51,50 @@ const getDetailClass = asyncHandler(async (req, res) => {
         .sort({ startTime: 1 })
         .lean();
 
+    const attendances = await Attendance.find({
+        sessionId: { $in: sessions.map(s => s._id) }
+    }).lean();
+
+    const attendanceMap = new Map(
+        attendances.map(a => [
+            `${a.studentId}_${a.sessionId}`,
+            a
+        ])
+    );
+
+    const studentsWithStats = students.map(student => {
+        let present = 0;
+        let late = 0;
+        let absent = 0;
+
+        sessions.forEach(session => {
+            const att = attendanceMap.get(
+                `${student._id}_${session._id}`
+            );
+
+            const status = att?.status || "absent";
+
+            if (status === "present") present++;
+            else if (status === "late") late++;
+            else absent++;
+        });
+
+        return {
+            ...student,
+            stats: {
+                present,
+                late,
+                absent
+            }
+        };
+    });
+
     return res.status(200).json({
         success: true,
         message: "Lấy thông tin lớp học thành công",
         data: {
             ...classData,
-            students,
+            students: studentsWithStats,
             studentCount: students.length,
             sessions,
             sessionCount: sessions.length,
