@@ -6,6 +6,7 @@ const FaceEmbedding = require("../../models/faceEmbedding");
 const Attendance = require("../../models/attendance");
 const { runInTransaction } = require("../../utils/runInTransaction");
 const AppError = require("../../utils/appError");
+const { uploadToR2 } = require("../../utils/uploadToR2");
 
 const getEmbeddingService = async (classId) => {
     const students = await Student.find({ classId });
@@ -34,12 +35,23 @@ const createStudentService = async ({ studentId, fullName, classId, lecturerId, 
             throw new AppError(403, "Bạn không có quyền tạo sinh viên trong lớp này");
         }
 
+        const safeClassName = classData.name
+            .normalize("NFD")                  // bỏ dấu
+            .replace(/[\u0300-\u036f]/g, "")   // remove accents
+            .replace(/\s+/g, "_")              // space → _
+            .replace(/[^a-zA-Z0-9_]/g, "");    // chỉ giữ chữ, số, _
+
+        const folder = `students/${safeClassName}/${studentId}`;
+        const fileName = `avatar_${studentId}`;
+        const { url } = await uploadToR2(file, folder, fileName);
+
         const newStudent = await Student.create(
             [
                 {
                     studentId,
                     fullName,
                     classId,
+                    avatarUrl: url,
                 }
             ],
             { session },
