@@ -37,7 +37,7 @@ function Login() {
             navigate("/classes");
         } catch (error) {
             console.log(error);
-            message.error("Đăng nhập thất bại");
+            message.error(error?.response?.data?.message || "Đăng nhập thất bại");
         } finally {
             setLoading(false);
         }

@@ -2,19 +2,11 @@ import axiosClient from "./axiosClient";
 
 const studentApi = {
     createStudent: (data) => {
-        return axiosClient.post("/students", data, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        });
+        return axiosClient.post("/students", data);
     },
 
     updateStudent: (studentId, data) => {
-        return axiosClient.put(`/students/${studentId}`, data, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        });
+        return axiosClient.put(`/students/${studentId}`, data);
     },
 
     deleteStudent: (studentId) => {

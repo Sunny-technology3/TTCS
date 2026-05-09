@@ -12,7 +12,7 @@ router.get("/embeddings", getEmbeddings);
 
 router.post("/", verifyToken, upload.single("file"), createStudent);
 
-router.put("/:studentId", verifyToken, updateStudent);
+router.put("/:id", verifyToken, upload.single("file"), updateStudent);
 
 router.delete("/:studentId", verifyToken, deleteStudent);
 

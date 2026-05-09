@@ -39,8 +39,8 @@ function SessionDetail() {
 
                 setClassData(res.data.data);
             } catch (error) {
-                message.error(error?.response?.data?.message || "Lỗi khi lấy thông tin lớp học");
                 console.log(error);
+                message.error(error?.response?.data?.message || "Lỗi khi lấy thông tin lớp học");
             } finally {
                 setLoading(false);
             }
@@ -58,8 +58,8 @@ function SessionDetail() {
 
                 setSessionData(res.data.data);
             } catch (error) {
-                message.error(error?.response?.data?.message || "Lỗi khi lấy thông tin phiên học");
                 console.log(error);
+                message.error(error?.response?.data?.message || "Lỗi khi lấy thông tin phiên học");
             } finally {
                 setLoading(false);
             }
@@ -76,8 +76,8 @@ function SessionDetail() {
 
             setData(res.data.data);
         } catch (error) {
-            message.error(error?.response?.data?.message || "Lỗi khi lấy danh sách điểm danh");
             console.log(error);
+            message.error(error?.response?.data?.message || "Lỗi khi lấy danh sách điểm danh");
         } finally {
             setLoading(false);
         }

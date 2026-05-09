@@ -125,7 +125,139 @@ const getClassAttendanceData = async ({ classId, lecturerId }) => {
     };
 };
 
+const autoCheckInService = async ({ classId, studentId }) => {
+    const classData = await Class.findById(classId);
+    if (!classData) {
+        throw new AppError(404, "Lớp học không tồn tại");
+    }
+
+    const session = await Session.findOne({
+        classId,
+        status: "in_progress",
+    });
+    if (!session) {
+        throw new AppError(404, "Không có buổi học đang diễn ra");
+    }
+
+    let attendance = await Attendance.findOne({
+        studentId,
+        sessionId: session._id,
+    });
+
+    if (attendance && attendance.checkIn) {
+        return res.json({
+            success: true,
+            message: "Đã điểm danh",
+        });
+    }
+
+    const now = new Date();
+    const lateThreshold = 10 * 60 * 1000;
+
+    let status = "present";
+
+    if (now - session.startTime > lateThreshold) {
+        status = "late";
+    }
+
+    if (!attendance) {
+        attendance = await Attendance.create({
+            studentId,
+            sessionId: session._id,
+            checkIn: now,
+            status,
+        });
+    }
+
+    return attendance;
+};
+
+const updateAttendanceStatusService = async ({ studentId, sessionId, status, lecturerId }) => {
+    const session = await Session.findById(sessionId).populate("classId");
+    if (!session) {
+        throw new AppError(404, "Không tìm thấy phiên học");
+    }
+
+    if (session.classId.lecturerId.toString() !== lecturerId.toString()) {
+        throw new AppError(403, "Bạn không có quyền cập nhật trạng thái phiên học này");
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+        throw new AppError(404, "Không tìm thấy sinh viên");
+    }
+
+    const attendance = await Attendance.findOne({ sessionId, studentId });
+    if (attendance) {
+        throw new AppError(400, "Sinh viên đã điểm danh rồi");
+    }
+
+    const result = await Attendance.create({
+        studentId,
+        sessionId,
+        checkIn: new Date(),
+        status,
+    });
+
+    return {
+        _id: student._id,
+        fullName: student.fullName,
+        studentId: student.studentId,
+        checkIn: result.checkIn,
+        status: result.status,
+    };
+};
+
+const markAllPresentService = async ({ classId, sessionId }) => {
+    const students = await Student.find({ classId });
+
+    // const bulkOps = students.map(student => ({
+    //     updateOne: {
+    //         filter: {
+    //             studentId: student._id,
+    //             sessionId
+    //         },
+    //         update: {
+    //             studentId: student._id,
+    //             sessionId,
+    //             checkIn: new Date(),
+    //             status: "present"
+    //         },
+    //         upsert: true
+    //     }
+    // }));
+
+    const bulkOps = [];
+
+    for (const student of students) {
+        const attendance = await Attendance.findOne({
+            studentId: student._id,
+            sessionId
+        });
+
+        if (!attendance) {
+            bulkOps.push({
+                insertOne: {
+                    document: {
+                        studentId: student._id,
+                        sessionId,
+                        checkIn: new Date(),
+                        status: "present"
+                    }
+                }
+            });
+        }
+    }
+
+    if (bulkOps.length > 0) {
+        await Attendance.bulkWrite(bulkOps);
+    }
+};
+
 module.exports = {
     getSessionAttendanceData,
     getClassAttendanceData,
+    autoCheckInService,
+    updateAttendanceStatusService,
+    markAllPresentService,
 };

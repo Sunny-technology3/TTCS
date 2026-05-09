@@ -33,7 +33,6 @@ function StudentTab({ students, classId, onStudentChange }) {
 
             formData.append("fullName", values.fullName);
             formData.append("studentId", values.studentId);
-
             formData.append("classId", classId);
 
             const fileObj = values.avatar?.file;

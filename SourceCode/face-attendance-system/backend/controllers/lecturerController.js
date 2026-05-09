@@ -1,10 +1,8 @@
-const Lecturer = require("../models/lecturer");
+const { getLecturerService } = require("../services/lecturer/lecturerService");
 const asyncHandler = require("../utils/asyncHandler");
 
 const getLecturer = asyncHandler(async (req, res) => {
-    const { id } = req.user;
-
-    const lecturer = await Lecturer.findById(id);
+    const lecturer = await getLecturerService(req.user.id);
 
     return res.status(200).json({
         success: true,

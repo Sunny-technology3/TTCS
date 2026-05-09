@@ -20,7 +20,7 @@ function AppHeader() {
         setLecturer(res.data.data);
       } catch (error) {
         console.log(error);
-        message.error("Lỗi khi lấy thông tin người dùng");
+        message.error(error?.response?.data?.message || "Lỗi khi lấy thông tin người dùng");
       }
     };
 
