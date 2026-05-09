@@ -8,6 +8,7 @@ Hệ thống điểm danh sinh viên sử dụng nhận diện khuôn mặt theo
 * Frontend: ReactJS + Ant Design
 * Backend: Node.js + Express + MongoDB
 * AI Service: Python + FastAPI + ONNX (ArcFace)
+* Cloud Storage: Cloudflare R2
 
 ---
 
@@ -47,6 +48,16 @@ Project đã được cấu hình sẵn MongoDB Atlas (cloud).
 Không cần cài MongoDB hoặc cấu hình thêm.
 
 Chỉ cần chạy project là sử dụng được ngay.
+
+---
+
+## Cloud Storage
+
+Hệ thống sử dụng Cloudflare R2 để lưu trữ file.
+
+Project đã được cấu hình sẵn Cloudflare R2 nên không cần cài đặt hoặc cấu hình thêm.
+
+Chỉ cần chạy project là có thể upload và truy cập file thông qua public URL.
 
 ---
 
@@ -138,6 +149,16 @@ ai-service/
 Tạo file `.env` trong thư mục `backend`:
 
 ```env
+
+DB_URL=
+
+secretKey=
+
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+R2_ENDPOINT=
+R2_PUBLIC_URL=
 
 ```
 
