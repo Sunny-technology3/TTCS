@@ -2,53 +2,46 @@ import { Tabs, Typography, Breadcrumb, message, Spin, Button, Space } from 'antd
 import { useNavigate, useParams } from 'react-router-dom';
 import StudentTab from './features/StudentTab';
 import SessionTab from './features/SessionTab';
-import { useEffect, useState } from 'react';
-import classApi from '../../api/classApi';
+import { useState } from 'react';
 import attendanceApi from '../../api/attendanceApi';
 import { DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useQueryClient } from '@tanstack/react-query';
+import useClassDetail from '../../hooks/useClassDetail';
 
 const { Title } = Typography;
 
 function ClassDetail() {
     const { classId } = useParams();
     const navigate = useNavigate();
-    const [classData, setClassData] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
     const [exporting, setExporting] = useState(false);
 
-    const fetchClassData = async () => {
-        setLoading(true);
-
-        try {
-            const res = await classApi.getDetailClass(classId);
-
-            setClassData(res.data.data);
-        } catch (error) {
-            message.error(error?.response?.data?.message || "Lỗi khi lấy thông tin lớp học");
-            console.log(error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchClassData();
-    }, [classId]);
+    const {
+        classDetail: classData,
+        loading: classLoading,
+        refetch,
+    } = useClassDetail(classId);
 
     const handleSessionChange = (newSessions) => {
-        setClassData((prev) => ({
-            ...prev,
-            sessions: newSessions,
-            sessionCount: newSessions.length
-        }));
+        queryClient.setQueryData(
+            ["classDetail", classId],
+            (oldData) => ({
+                ...oldData,
+                sessions: newSessions,
+                sessionCount: newSessions.length,
+            })
+        );
     };
 
     const handleStudentChange = (newStudents) => {
-        setClassData((prev) => ({
-            ...prev,
-            students: newStudents,
-            studentCount: newStudents.length
-        }));
+        queryClient.setQueryData(
+            ["classDetail", classId],
+            (oldData) => ({
+                ...oldData,
+                students: newStudents,
+                studentCount: newStudents.length,
+            })
+        );
     };
 
     const getDownloadFileName = (contentDisposition) => {
@@ -118,7 +111,7 @@ function ClassDetail() {
                 ]}
             />
 
-            <Spin spinning={loading}>
+            <Spin spinning={classLoading}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
                     <Title level={3} style={{ margin: 0 }}>
                         {classData?.name ? classData.name : "Đang tải..."}
@@ -135,8 +128,8 @@ function ClassDetail() {
 
                         <Button
                             icon={<ReloadOutlined />}
-                            onClick={() => fetchClassData()}
-                            loading={loading}
+                            onClick={() => refetch()}
+                            loading={classLoading}
                         >
                             Làm mới
                         </Button>

@@ -1,11 +1,14 @@
 import { Table, Typography, Breadcrumb, Spin, message, Button, Tooltip, Space, Tag } from 'antd';
 import { ReloadOutlined, PlayCircleOutlined, StopOutlined, CheckOutlined, DownloadOutlined } from '@ant-design/icons';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import attendanceApi from '../../api/attendanceApi';
-import classApi from '../../api/classApi';
 import sessionApi from '../../api/sessionApi';
 import dayjs from 'dayjs';
+import useClassDetail from '../../hooks/useClassDetail';
+import useSessionDetail from '../../hooks/useSessionDetail';
+import { useQueryClient } from '@tanstack/react-query';
+import useAttendanceBySession from '../../hooks/useAttendanceBySession';
 
 const { Title } = Typography;
 
@@ -24,70 +27,25 @@ const SESSION_STATUS_MAP = {
 function SessionDetail() {
     const { classId, sessionId } = useParams();
     const navigate = useNavigate();
-    const [data, setData] = useState([]);
-    const [classData, setClassData] = useState(null);
-    const [sessionData, setSessionData] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
     const [exporting, setExporting] = useState(false);
+    const [markingAll, setMarkingAll] = useState(false);
 
-    useEffect(() => {
-        const fetchClassData = async () => {
-            setLoading(true);
+    const {
+        classDetail: classData,
+        loading: classLoading,
+    } = useClassDetail(classId);
 
-            try {
-                const res = await classApi.getDetailClass(classId);
+    const {
+        sessionDetail: sessionData,
+        loading: sessionLoading,
+    } = useSessionDetail(sessionId);
 
-                setClassData(res.data.data);
-            } catch (error) {
-                console.log(error);
-                message.error(error?.response?.data?.message || "Lỗi khi lấy thông tin lớp học");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchClassData();
-    }, [classId]);
-
-    useEffect(() => {
-        const fetchSessionData = async () => {
-            setLoading(true);
-
-            try {
-                const res = await sessionApi.getDetailSession(sessionId);
-
-                setSessionData(res.data.data);
-            } catch (error) {
-                console.log(error);
-                message.error(error?.response?.data?.message || "Lỗi khi lấy thông tin phiên học");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchSessionData();
-    }, [sessionId]);
-
-    const fetchAttendance = async (classId, sessionId) => {
-        setLoading(true);
-
-        try {
-            const res = await attendanceApi.getAttendanceBySession(classId, sessionId);
-
-            setData(res.data.data);
-        } catch (error) {
-            console.log(error);
-            message.error(error?.response?.data?.message || "Lỗi khi lấy danh sách điểm danh");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (!classId || !sessionId) return;
-
-        fetchAttendance(classId, sessionId);
-    }, [classId, sessionId]);
+    const {
+        attendanceData: data,
+        loading: attendanceLoading,
+        refetch: refetchAttendance,
+    } = useAttendanceBySession(classId, sessionId);
 
     const handleUpdateAttendanceStatus = async (sessionId, studentId, status) => {
         try {
@@ -95,10 +53,14 @@ function SessionDetail() {
 
             const updated = res.data.data;
 
-            setData((prev) =>
-                prev.map((item) =>
-                    item._id === studentId ? { ...item, ...updated } : item
-                )
+            queryClient.setQueryData(
+                ["attendanceBySession", classId, sessionId],
+                (oldData) =>
+                    oldData.map((item) =>
+                        item._id === studentId
+                            ? { ...item, ...updated }
+                            : item
+                    )
             );
 
             message.success("Cập nhật trạng thái thành công");
@@ -112,10 +74,13 @@ function SessionDetail() {
         try {
             await sessionApi.updateStatusSession(sessionId, status);
 
-            setSessionData((prev) => ({
-                ...prev,
-                status,
-            }));
+            queryClient.setQueryData(
+                ["sessionDetail", sessionId],
+                (oldData) => ({
+                    ...oldData,
+                    status,
+                })
+            );
 
             message.success("Cập nhật trạng thái phiên học thành công");
         } catch (error) {
@@ -125,18 +90,22 @@ function SessionDetail() {
     };
 
     const handleMarkAll = async () => {
+        setMarkingAll(true);
+
         try {
             await attendanceApi.markAllPresent({
                 classId,
                 sessionId
             });
 
-            message.success("Điểm danh tất cả thành công");
+            refetchAttendance();
 
-            fetchAttendance(classId, sessionId);
+            message.success("Điểm danh tất cả thành công");
         } catch (error) {
             console.log(error);
             message.error(error?.response?.data?.message || "Có lỗi xảy ra");
+        } finally{
+            setMarkingAll(false);
         }
     };
 
@@ -161,6 +130,7 @@ function SessionDetail() {
 
         try {
             const response = await attendanceApi.exportAttendanceBySession(sessionId);
+
             const blob = new Blob(
                 [response.data],
                 {
@@ -277,7 +247,7 @@ function SessionDetail() {
                 ]}
             />
 
-            <Spin spinning={loading}>
+            <Spin spinning={attendanceLoading || classLoading || sessionLoading}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
                     <Title level={3} style={{ margin: 0 }}>
                         {sessionData?.name ? sessionData.name : "Đang tải..."} - Điểm danh
@@ -309,6 +279,7 @@ function SessionDetail() {
                             <Button
                                 icon={<CheckOutlined />}
                                 onClick={handleMarkAll}
+                                loading={markingAll}
                             >
                                 Điểm danh tất cả
                             </Button>
@@ -326,8 +297,8 @@ function SessionDetail() {
 
                         <Button
                             icon={<ReloadOutlined />}
-                            onClick={() => fetchAttendance(classId, sessionId)}
-                            loading={loading}
+                            onClick={refetchAttendance}
+                            loading={attendanceLoading}
                         >
                             Làm mới
                         </Button>

@@ -6,7 +6,7 @@ import MainLayout from './components/layouts/MainLayout';
 import AuthLayout from './components/layouts/AuthLayout';
 import ClassList from './pages/classes/ClassList';
 import ClassDetail from './pages/classes/ClassDetail';
-import SessionDetail from './pages/classes/SessionDetail';
+import SessionDetail from './pages/sessions/SessionDetail';
 import ProtectedRoute from './components/protectedRoute/protectedRoute';
 
 const { Content } = Layout;
