@@ -1,5 +1,12 @@
 import { Table, Typography, Breadcrumb, Spin, message, Button, Tooltip, Space, Tag } from 'antd';
-import { ReloadOutlined, PlayCircleOutlined, StopOutlined, CheckOutlined, DownloadOutlined } from '@ant-design/icons';
+import {
+    ReloadOutlined,
+    PlayCircleOutlined,
+    StopOutlined,
+    CheckOutlined,
+    DownloadOutlined,
+    VideoCameraOutlined,
+} from '@ant-design/icons';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import attendanceApi from '../../api/attendanceApi';
@@ -98,13 +105,15 @@ function SessionDetail() {
                 sessionId
             });
 
-            refetchAttendance();
+            queryClient.invalidateQueries({
+                queryKey: ["attendanceBySession", classId, sessionId]
+            });
 
             message.success("Điểm danh tất cả thành công");
         } catch (error) {
             console.log(error);
             message.error(error?.response?.data?.message || "Có lỗi xảy ra");
-        } finally{
+        } finally {
             setMarkingAll(false);
         }
     };
@@ -274,6 +283,18 @@ function SessionDetail() {
                                 Kết thúc
                             </Button>
                         </Tooltip>
+
+                        <Button
+                            icon={<VideoCameraOutlined />}
+                            disabled={sessionData?.status !== "in_progress"}
+                            onClick={() =>
+                                navigate(
+                                    `/classes/${classId}/sessions/${sessionId}/camera`
+                                )
+                            }
+                        >
+                            Camera realtime
+                        </Button>
 
                         <Tooltip title="Điểm danh tất cả">
                             <Button
