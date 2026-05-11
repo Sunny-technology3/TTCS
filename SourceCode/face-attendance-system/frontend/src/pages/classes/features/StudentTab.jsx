@@ -1,7 +1,26 @@
-import { Table, Button, Space, Tooltip, Modal, Form, Input, Upload, message, Popconfirm } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import {
+    Table,
+    Button,
+    Space,
+    Tooltip,
+    Modal,
+    Form,
+    Input,
+    Upload,
+    message,
+    Popconfirm,
+    Select,
+} from 'antd';
+import {
+    PlusOutlined,
+    EditOutlined,
+    DeleteOutlined,
+    UploadOutlined,
+    SearchOutlined,
+} from '@ant-design/icons';
 import { useState } from 'react';
 import studentApi from '../../../api/studentApi';
+import { normalizeText } from '../../../utils/string';
 
 function StudentTab({ students, classId, onStudentChange }) {
     const [open, setOpen] = useState(false);
@@ -9,6 +28,8 @@ function StudentTab({ students, classId, onStudentChange }) {
     const [data, setData] = useState(students);
     const [form] = Form.useForm();
     const [loadingSubmit, setLoadingSubmit] = useState(false);
+    const [searchType, setSearchType] = useState("studentId");
+    const [searchText, setSearchText] = useState("");
 
     const openAdd = () => {
         setEditing(null);
@@ -90,6 +111,13 @@ function StudentTab({ students, classId, onStudentChange }) {
         }
     };
 
+    const filteredData = (data || []).filter((student) => {
+        const value = normalizeText(student?.[searchType] || "");
+        const keyword = normalizeText(searchText);
+
+        return value.includes(keyword);
+    });
+
     const columns = [
         { title: 'Mã sinh viên', dataIndex: 'studentId' },
         { title: 'Họ và tên', dataIndex: 'fullName' },
@@ -151,15 +179,63 @@ function StudentTab({ students, classId, onStudentChange }) {
 
     return (
         <div>
-            <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>
-                Thêm sinh viên
-            </Button>
+            <Space
+                style={{
+                    width: "100%",
+                    justifyContent: "flex-end",
+                    marginTop: 16,
+                }}
+            >
+                <Space.Compact>
+                    <Select
+                        value={searchType}
+                        onChange={setSearchType}
+                        style={{ width: 130 }}
+                        options={[
+                            {
+                                label: "Mã sinh viên",
+                                value: "studentId",
+                            },
+                            {
+                                label: "Họ và tên",
+                                value: "fullName",
+                            },
+                        ]}
+                    />
+
+                    <Input
+                        allowClear
+                        placeholder={
+                            searchType === "studentId"
+                                ? "Nhập mã sinh viên..."
+                                : "Nhập họ tên..."
+                        }
+                        prefix={<SearchOutlined />}
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        style={{ width: 260 }}
+                    />
+                </Space.Compact>
+
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={openAdd}
+                >
+                    Thêm sinh viên
+                </Button>
+            </Space>
 
             <Table
                 style={{ marginTop: 16 }}
-                dataSource={data}
+                dataSource={filteredData}
                 columns={columns}
-                rowKey="id"
+                rowKey="_id"
+                locale={{
+                    emptyText: searchText
+                        ? "Không tìm thấy sinh viên phù hợp"
+                        : "Chưa có sinh viên nào",
+                }}
             />
 
             <Modal

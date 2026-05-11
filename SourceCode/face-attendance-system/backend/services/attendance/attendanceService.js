@@ -33,6 +33,7 @@ const getSessionAttendanceData = async ({
     sessionId,
     lecturerId,
     classId,
+    status,
 }) => {
     const session = await Session.findById(sessionId).populate("classId").lean();
 
@@ -55,6 +56,7 @@ const getSessionAttendanceData = async ({
     const students = await Student.find({ classId: session.classId._id })
         .sort({ studentId: 1, fullName: 1 })
         .lean();
+
     const attendances = await Attendance.find({ sessionId }).lean();
     const attendanceMap = new Map(
         attendances.map((attendance) => [String(attendance.studentId), attendance])
@@ -76,11 +78,17 @@ const getSessionAttendanceData = async ({
         };
     });
 
+    let resultRows = rows;
+
+    if (status) {
+        resultRows = rows.filter((r) => r.status === status);
+    }
+
     return {
         session,
         classData: session.classId,
-        studentCount: rows.length,
-        rows,
+        studentCount: resultRows.length,
+        rows: resultRows,
     };
 };
 

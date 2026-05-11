@@ -1,11 +1,12 @@
 import axiosClient from "./axiosClient";
 
 const attendanceApi = {
-    getAttendanceBySession: (classId, sessionId) => {
+    getAttendanceBySession: (classId, sessionId, status) => {
         return axiosClient.get("/attendances/session", {
             params: {
                 classId,
                 sessionId,
+                status,
             }
         });
     },

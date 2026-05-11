@@ -1,21 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
+import classApi from "../api/classApi.js";
 import { message } from "antd";
-import attendanceApi from "../api/attendanceApi.js";
 
-const fetchAttendanceBySession = async (classId, sessionId, status) => {
+const fetchClasses = async (search) => {
     const res =
-        await attendanceApi.getAttendanceBySession(classId, sessionId, status);
+        await classApi.getAllClass(search);
 
     return res.data.data;
 };
 
-const useAttendanceBySession = (classId, sessionId, status, options = {}) => {
+const useAllClass = (search, options = {}) => {
     const { enabled = true, ...rest } = options;
 
     const query = useQuery({
-        queryKey: ["attendanceBySession", classId, sessionId, status],
-        queryFn: () => fetchAttendanceBySession(classId, sessionId, status),
+        queryKey: ["allClass", search],
+        queryFn: () => fetchClasses(search),
         enabled,
         ...rest,
     });
@@ -24,13 +24,13 @@ const useAttendanceBySession = (classId, sessionId, status, options = {}) => {
         if (query.isError) {
             message?.error(
                 query.error?.response?.data?.message ||
-                "Lỗi khi lấy danh sách điểm danh phiên học",
+                "Lỗi khi lấy danh sách lớp học",
             );
         }
     }, [query.isError, query.error]);
 
     return {
-        attendanceData: query.data || [],
+        allClass: query.data || [],
         loading: query.isLoading || query.isFetching,
         isError: query.isError,
         refetch: query.refetch,
@@ -38,4 +38,4 @@ const useAttendanceBySession = (classId, sessionId, status, options = {}) => {
     };
 };
 
-export default useAttendanceBySession;
+export default useAllClass;

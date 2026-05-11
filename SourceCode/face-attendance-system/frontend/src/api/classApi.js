@@ -1,8 +1,8 @@
 import axiosClient from "./axiosClient";
 
 const classApi = {
-    getAllClass: () => {
-        return axiosClient.get("/classes");
+    getAllClass: (search) => {
+        return axiosClient.get("/classes", { params: { search } });
     },
 
     getDetailClass: (classId) => {

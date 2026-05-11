@@ -199,8 +199,6 @@ Sau khi chạy:
 
 ---
 
----
-
 ## 3. Chạy AI Service (chạy riêng)
 
 ```bash
@@ -226,6 +224,29 @@ uvicorn main:app --reload --port 8000
 4. Tạo phiên học (session)
 5. Nhấn **Bắt đầu** => hệ thống chạy AI realtime
 6. Nhấn **Kết thúc** để dừng
+
+---
+
+## Tài khoản dùng thử
+
+Hệ thống đã cung cấp sẵn tài khoản giảng viên để phục vụ việc kiểm thử nhanh các chức năng.
+
+### Thông tin đăng nhập
+
+```txt
+Tài khoản: GV001
+Mật khẩu: 12345678
+```
+
+Sau khi đăng nhập, người dùng có thể trải nghiệm các chức năng chính:
+
+* Quản lý lớp học
+* Quản lý sinh viên
+* Tạo và quản lý phiên học
+* Điểm danh realtime bằng nhận diện khuôn mặt
+* Xuất file điểm danh Excel
+
+Lưu ý: Đây là tài khoản phục vụ mục đích demo và kiểm thử hệ thống.
 
 ---
 

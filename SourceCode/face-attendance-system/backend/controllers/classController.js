@@ -8,7 +8,10 @@ const {
 } = require("../services/class/classService");
 
 const getAllClass = asyncHandler(async (req, res) => {
-    const result = await getAllClassService(req.user.id);
+    const result = await getAllClassService({
+        lecturerId: req.user.id,
+        search: req.query.search,
+    });
 
     return res.status(200).json({
         success: true,

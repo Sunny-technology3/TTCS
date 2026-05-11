@@ -1,4 +1,16 @@
-import { Table, Typography, Breadcrumb, Spin, message, Button, Tooltip, Space, Tag } from 'antd';
+import {
+    Table,
+    Typography,
+    Breadcrumb,
+    Spin,
+    message,
+    Button,
+    Tooltip,
+    Space,
+    Tag,
+    Select,
+    Input,
+} from 'antd';
 import {
     ReloadOutlined,
     PlayCircleOutlined,
@@ -16,6 +28,7 @@ import useClassDetail from '../../hooks/useClassDetail';
 import useSessionDetail from '../../hooks/useSessionDetail';
 import { useQueryClient } from '@tanstack/react-query';
 import useAttendanceBySession from '../../hooks/useAttendanceBySession';
+import { normalizeText } from '../../utils/string';
 
 const { Title } = Typography;
 
@@ -37,6 +50,9 @@ function SessionDetail() {
     const queryClient = useQueryClient();
     const [exporting, setExporting] = useState(false);
     const [markingAll, setMarkingAll] = useState(false);
+    const [searchType, setSearchType] = useState("studentId");
+    const [searchText, setSearchText] = useState("");
+    const [statusFilter, setStatusFilter] = useState(null);
 
     const {
         classDetail: classData,
@@ -52,7 +68,7 @@ function SessionDetail() {
         attendanceData: data,
         loading: attendanceLoading,
         refetch: refetchAttendance,
-    } = useAttendanceBySession(classId, sessionId);
+    } = useAttendanceBySession(classId, sessionId, statusFilter);
 
     const handleUpdateAttendanceStatus = async (sessionId, studentId, status) => {
         try {
@@ -165,6 +181,13 @@ function SessionDetail() {
             setExporting(false);
         }
     };
+
+    const filteredData = (data || []).filter((student) => {
+        const value = normalizeText(student?.[searchType] || "");
+        const keyword = normalizeText(searchText);
+
+        return value.includes(keyword);
+    });
 
     const columns = [
         { title: 'Mã sinh viên', dataIndex: 'studentId' },
@@ -327,6 +350,55 @@ function SessionDetail() {
                 </div>
 
                 <div style={{ marginTop: 8, marginBottom: 16 }}>
+                    <Space
+                        style={{
+                            width: "100%",
+                            justifyContent: "flex-end",
+                            marginBottom: 12,
+                        }}
+                    >
+                        <Space.Compact>
+                            <Select
+                                value={searchType}
+                                onChange={setSearchType}
+                                style={{ width: 130 }}
+                                options={[
+                                    { label: "Mã sinh viên", value: "studentId" },
+                                    { label: "Họ và tên", value: "fullName" },
+                                ]}
+                            />
+
+                            <Input
+                                allowClear
+                                placeholder={
+                                    searchType === "studentId"
+                                        ? "Nhập mã sinh viên..."
+                                        : "Nhập họ tên..."
+                                }
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                                style={{ width: 240 }}
+                            />
+                        </Space.Compact>
+
+                        <Space>
+                            <Select
+                                value={statusFilter}
+                                onChange={setStatusFilter}
+                                style={{ width: 160 }}
+                                placeholder="Trạng thái"
+                                allowClear
+                                options={[
+                                    { label: "Có mặt", value: "present" },
+                                    { label: "Đi muộn", value: "late" },
+                                    { label: "Vắng mặt", value: "absent" },
+                                ]}
+                            />
+                        </Space>
+                    </Space>
+                </div>
+
+                <div style={{ marginTop: 8, marginBottom: 16 }}>
                     <Space size="large">
                         <div>
                             <strong>Bắt đầu:</strong>{" "}
@@ -354,9 +426,15 @@ function SessionDetail() {
                 </div>
 
                 <Table
-                    dataSource={data}
+                    dataSource={filteredData}
                     columns={columns}
                     rowKey="_id"
+                    locale={{
+                        emptyText:
+                            searchText || statusFilter
+                                ? "Không tìm thấy dữ liệu phù hợp"
+                                : "Chưa có dữ liệu điểm danh",
+                    }}
                 />
             </Spin>
         </div>

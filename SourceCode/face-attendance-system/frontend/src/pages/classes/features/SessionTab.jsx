@@ -1,4 +1,17 @@
-import { Table, Button, Space, Tooltip, Modal, Form, Input, DatePicker, message, Popconfirm, Tag, Upload } from 'antd';
+import {
+    Table,
+    Button,
+    Space,
+    Tooltip,
+    Modal,
+    Form,
+    Input,
+    DatePicker,
+    message,
+    Popconfirm,
+    Tag,
+    Upload,
+} from 'antd';
 import {
     PlusOutlined,
     EyeOutlined,
@@ -321,11 +334,12 @@ function SessionTab({ sessions, classId, onSessionChange }) {
                 dataSource={data}
                 columns={columns}
                 rowKey="_id"
+                locale={"Chưa có phiên học nào"}
             />
 
             <Modal
                 open={open}
-                title={editing ? 'Sửa buổi học' : 'Thêm buổi học'}
+                title={editing ? "Sửa buổi học" : "Thêm buổi học"}
                 onCancel={() => setOpen(false)}
                 onOk={() => form.submit()}
             >

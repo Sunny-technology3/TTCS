@@ -27,13 +27,14 @@ const autoCheckIn = asyncHandler(async (req, res) => {
 });
 
 const getAttendanceBySession = asyncHandler(async (req, res) => {
-    const { classId, sessionId } = req.query;
+    const { classId, sessionId, status } = req.query;
     const { id } = req.user;
 
     const attendanceData = await getSessionAttendanceData({
         sessionId,
         lecturerId: id,
         classId,
+        status,
     });
 
     return res.status(200).json({

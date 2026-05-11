@@ -6,8 +6,19 @@ const Attendance = require("../../models/attendance");
 const { runInTransaction } = require("../../utils/runInTransaction");
 const AppError = require("../../utils/appError");
 
-const getAllClassService = async (lecturerId) => {
-    const classes = await Class.find({ lecturerId }).lean();
+const getAllClassService = async ({ lecturerId, search }) => {
+    const query = {
+        lecturerId,
+    };
+
+    if (search) {
+        query.name = {
+            $regex: search,
+            $options: "i",
+        };
+    }
+
+    const classes = await Class.find(query).lean();
 
     const result = await Promise.all(
         classes.map(async (cls) => {
