@@ -1,8 +1,12 @@
 const asyncHandler = require("../utils/asyncHandler");
 const {
     getDetailSessionService,
-    createSessionService, updateSessionService, updateSessionStatusService,
+    createSessionService, 
+    updateSessionService, 
+    updateSessionStatusService,
     deleteSessionService,
+    importSessionsService,
+    downloadSessionTemplateService,
 } = require("../services/session/sessionService");
 
 const getDetailSession = asyncHandler(async (req, res) => {
@@ -86,10 +90,38 @@ const deleteSession = asyncHandler(async (req, res) => {
     });
 });
 
+const importSessions = asyncHandler(async (req, res) => {
+    const { classId } = req.body;
+    const { id } = req.user;
+
+    const sessions = await importSessionsService({
+        file: req.file,
+        classId,
+        lecturerId: id,
+    });
+
+    return res.status(201).json({
+        success: true,
+        message: "Import phiên học thành công",
+        data: sessions,
+    });
+});
+
+const downloadSessionTemplate = asyncHandler(async (req, res) => {
+    const templatePath = await downloadSessionTemplateService();
+
+    return res.download(
+        templatePath,
+        "session-template.xlsx"
+    );
+});
+
 module.exports = {
     getDetailSession,
     createSession,
     updateSession,
     updateSessionStatus,
     deleteSession,
+    importSessions,
+    downloadSessionTemplate,
 };

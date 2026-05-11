@@ -1,5 +1,14 @@
-import { Table, Button, Space, Tooltip, Modal, Form, Input, DatePicker, message, Popconfirm, Tag } from 'antd';
-import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Tooltip, Modal, Form, Input, DatePicker, message, Popconfirm, Tag, Upload } from 'antd';
+import {
+    PlusOutlined,
+    EyeOutlined,
+    EditOutlined,
+    DeleteOutlined,
+    PlayCircleOutlined,
+    StopOutlined,
+    UploadOutlined,
+    DownloadOutlined,
+} from '@ant-design/icons';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -17,6 +26,8 @@ function SessionTab({ sessions, classId, onSessionChange }) {
     const [data, setData] = useState(sessions);
     const [form] = Form.useForm();
     const navigate = useNavigate();
+    const [importing, setImporting] = useState(false);
+    const [downloading, setDownloading] = useState(false);
 
     const openAdd = () => {
         setEditing(null)
@@ -112,6 +123,76 @@ function SessionTab({ sessions, classId, onSessionChange }) {
         }
     };
 
+    const handleImportSessions = async (file) => {
+        setImporting(true);
+
+        try {
+            const formData = new FormData();
+
+            formData.append("file", file);
+            formData.append("classId", classId);
+
+            const res = await sessionApi.importSessions(formData);
+
+            const newData = [...data, ...res.data.data];
+
+            setData(newData);
+
+            onSessionChange?.(newData);
+
+            message.success("Import phiên học thành công");
+
+        } catch (error) {
+            console.log(error);
+
+            message.error(
+                error?.response?.data?.message ||
+                "Import thất bại"
+            );
+        } finally {
+            setImporting(false);
+        }
+
+        return false;
+    };
+
+    const handleDownloadTemplate = async () => {
+        setDownloading(true);
+
+        try {
+            const response = await sessionApi.downloadSessionTemplate();
+
+            const blob = new Blob(
+                [response.data],
+                {
+                    type: response.headers["content-type"],
+                }
+            );
+
+            const url = window.URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+
+            link.href = url;
+            link.download = "Biểu mẫu danh sách phiên học.xlsx";
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            document.body.removeChild(link);
+
+            window.URL.revokeObjectURL(url);
+
+            message.success("Tải file mẫu thành công");
+        } catch (error) {
+            console.log(error);
+            message.error("Tải file mẫu thất bại");
+        } finally {
+            setDownloading(false);
+        }
+    };
+
     const columns = [
         { title: 'Tên', dataIndex: 'name' },
         {
@@ -204,9 +285,36 @@ function SessionTab({ sessions, classId, onSessionChange }) {
 
     return (
         <div>
-            <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>
-                Thêm phiên học
-            </Button>
+            <Space>
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={openAdd}
+                >
+                    Thêm phiên học
+                </Button>
+
+                <Upload
+                    accept=".xlsx,.xls"
+                    showUploadList={false}
+                    beforeUpload={handleImportSessions}
+                >
+                    <Button
+                        icon={<UploadOutlined />}
+                        loading={importing}
+                    >
+                        Import Excel
+                    </Button>
+                </Upload>
+
+                <Button
+                    icon={<DownloadOutlined />}
+                    loading={downloading}
+                    onClick={handleDownloadTemplate}
+                >
+                    Tải file mẫu
+                </Button>
+            </Space>
 
             <Table
                 style={{ marginTop: 16 }}

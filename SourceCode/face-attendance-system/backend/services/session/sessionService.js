@@ -2,6 +2,8 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const ExcelJS = require("exceljs");
+const XLSX = require("xlsx");
+const dayjs = require("dayjs");
 const Session = require("../../models/session");
 const Class = require("../../models/class");
 const Attendance = require("../../models/attendance");
@@ -149,10 +151,116 @@ const deleteSessionService = async ({ sessionId, lecturerId }) => {
     });
 };
 
+const importSessionsService = async ({
+    file,
+    classId,
+    lecturerId,
+}) => {
+
+    if (!file) {
+        throw new AppError(400, "Vui lòng upload file Excel");
+    }
+
+    const classData = await Class.findById(classId);
+
+    if (!classData) {
+        throw new AppError(404, "Không tìm thấy lớp học");
+    }
+
+    if (classData.lecturerId.toString() !== lecturerId.toString()) {
+        throw new AppError(
+            403,
+            "Bạn không có quyền import phiên học cho lớp này"
+        );
+    }
+
+    const workbook = XLSX.read(file.buffer, {
+        type: "buffer"
+    });
+
+    const sheetName = workbook.SheetNames[0];
+
+    const worksheet = workbook.Sheets[sheetName];
+
+    const rows = XLSX.utils.sheet_to_json(
+        worksheet,
+        {
+            range: 2,
+            raw: false,
+        }
+    );
+
+    if (!rows.length) {
+        throw new AppError(400, "File Excel không có dữ liệu");
+    }
+
+    const sessions = [];
+
+    for (const row of rows) {
+        const name = row["Tên buổi"];
+        const startTimeValue = row["Thời gian bắt đầu"];
+        const endTimeValue = row["Thời gian kết thúc"];
+
+        if (!name || !startTimeValue || !endTimeValue) {
+            throw new AppError(
+                400,
+                "File Excel thiếu dữ liệu bắt buộc"
+            );
+        }
+
+        const startTime = new Date(startTimeValue);
+        const endTime = new Date(endTimeValue);
+
+        if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+            throw new AppError(
+                400,
+                `Phiên "${name}" có thời gian không hợp lệ`
+            );
+        }
+
+        if (startTime >= endTime) {
+            throw new AppError(
+                400,
+                `Phiên "${name}" có thời gian không hợp lệ`
+            );
+        }
+
+        sessions.push({
+            name,
+            startTime,
+            endTime,
+            classId,
+            status: "not_started",
+        });
+    }
+
+    const insertedSessions = await Session.insertMany(sessions);
+
+    return insertedSessions;
+};
+
+const downloadSessionTemplateService = async () => {
+    const templatePath = path.join(
+        __dirname,
+        "..",
+        "..",
+        "templates",
+        "session-template.xlsx"
+    );
+
+    if (!fs.existsSync(templatePath)) {
+        throw new AppError(404, "Không tìm thấy file mẫu");
+    }
+
+    return templatePath;
+};
+
 module.exports = {
     getDetailSessionService,
     createSessionService,
     updateSessionService,
     updateSessionStatusService,
     deleteSessionService,
+    importSessionsService,
+    downloadSessionTemplateService,
 };

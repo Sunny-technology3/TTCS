@@ -20,6 +20,27 @@ const sessionApi = {
     deleteSession: (sessionId) => {
         return axiosClient.delete(`/sessions/${sessionId}`);
     },
+
+    importSessions: (formData) => {
+        return axiosClient.post(
+            "/sessions/import",
+            formData,
+            {
+                headers: {
+                    "Content-Type": "multipart/form-data"
+                }
+            }
+        );
+    },
+
+    downloadSessionTemplate: () => {
+        return axiosClient.get(
+            "/sessions/template/download",
+            {
+                responseType: "blob",
+            }
+        );
+    },
 };
 
 export default sessionApi;
