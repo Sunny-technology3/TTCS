@@ -278,7 +278,12 @@ function SessionTab({ sessions, classId, onSessionChange }) {
                     </Tooltip>
 
                     <Tooltip title="Sửa">
-                        <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(record)} />
+                        <Button
+                            type="text"
+                            icon={<EditOutlined />}
+                            disabled={record.status !== "not_started"}
+                            onClick={() => openEdit(record)}
+                        />
                     </Tooltip>
 
                     <Popconfirm
@@ -340,6 +345,8 @@ function SessionTab({ sessions, classId, onSessionChange }) {
             <Modal
                 open={open}
                 title={editing ? "Sửa buổi học" : "Thêm buổi học"}
+                okText={editing ? "Cập nhật" : "Tạo buổi"}
+                cancelText={"Hủy"}
                 onCancel={() => setOpen(false)}
                 onOk={() => form.submit()}
             >

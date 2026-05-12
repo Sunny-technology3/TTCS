@@ -10,6 +10,9 @@ import {
     Tag,
     Select,
     Input,
+    Form,
+    DatePicker,
+    Modal,
 } from 'antd';
 import {
     ReloadOutlined,
@@ -18,6 +21,7 @@ import {
     CheckOutlined,
     DownloadOutlined,
     VideoCameraOutlined,
+    EditOutlined,
 } from '@ant-design/icons';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -53,6 +57,8 @@ function SessionDetail() {
     const [searchType, setSearchType] = useState("studentId");
     const [searchText, setSearchText] = useState("");
     const [statusFilter, setStatusFilter] = useState(null);
+    const [openEdit, setOpenEdit] = useState(false);
+    const [form] = Form.useForm();
 
     const {
         classDetail: classData,
@@ -182,6 +188,48 @@ function SessionDetail() {
         }
     };
 
+    const handleEditSession = async (values) => {
+        try {
+            const payload = {
+                startTime: values.startTime.toISOString(),
+                endTime: values.endTime.toISOString(),
+            };
+
+            const res = await sessionApi.updateSession(
+                sessionId,
+                payload
+            );
+
+            queryClient.setQueryData(
+                ["sessionDetail", sessionId],
+                res.data.data
+            );
+
+            message.success("Cập nhật phiên học thành công");
+
+            setOpenEdit(false);
+        } catch (error) {
+            console.log(error);
+            message.error(
+                error?.response?.data?.message ||
+                "Có lỗi xảy ra"
+            );
+        }
+    };
+
+    const handleOpenEdit = () => {
+        form.setFieldsValue({
+            startTime: sessionData?.startTime
+                ? dayjs(sessionData.startTime)
+                : null,
+            endTime: sessionData?.endTime
+                ? dayjs(sessionData.endTime)
+                : null,
+        });
+
+        setOpenEdit(true);
+    };
+
     const filteredData = (data || []).filter((student) => {
         const value = normalizeText(student?.[searchType] || "");
         const keyword = normalizeText(searchText);
@@ -286,6 +334,14 @@ function SessionDetail() {
                     </Title>
 
                     <Space>
+                        <Button
+                            icon={<EditOutlined />}
+                            disabled={sessionData?.status !== "not_started"}
+                            onClick={handleOpenEdit}
+                        >
+                            Sửa phiên học
+                        </Button>
+
                         <Tooltip title="Bắt đầu">
                             <Button
                                 icon={<PlayCircleOutlined />}
@@ -437,6 +493,55 @@ function SessionDetail() {
                     }}
                 />
             </Spin>
+
+            <Modal
+                open={openEdit}
+                title="Sửa phiên học"
+                okText={"Cập nhật"}
+                cancelText={"Hủy"}
+                onCancel={() => setOpenEdit(false)}
+                onOk={() => form.submit()}
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleEditSession}
+                >
+                    <Form.Item
+                        name="startTime"
+                        label="Thời gian bắt đầu"
+                        rules={[
+                            {
+                                required: true,
+                                message: "Vui lòng chọn thời gian bắt đầu"
+                            }
+                        ]}
+                    >
+                        <DatePicker
+                            showTime={{ format: "HH:mm" }}
+                            format="DD/MM/YYYY HH:mm"
+                            style={{ width: "100%" }}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="endTime"
+                        label="Thời gian kết thúc"
+                        rules={[
+                            {
+                                required: true,
+                                message: "Vui lòng chọn thời gian kết thúc"
+                            }
+                        ]}
+                    >
+                        <DatePicker
+                            showTime={{ format: "HH:mm" }}
+                            format="DD/MM/YYYY HH:mm"
+                            style={{ width: "100%" }}
+                        />
+                    </Form.Item>
+                </Form>
+            </Modal>
         </div>
     );
 };

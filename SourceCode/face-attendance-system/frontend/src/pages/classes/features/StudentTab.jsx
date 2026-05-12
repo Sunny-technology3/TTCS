@@ -241,6 +241,8 @@ function StudentTab({ students, classId, onStudentChange }) {
             <Modal
                 open={open}
                 title={editing ? 'Sửa sinh viên' : 'Thêm sinh viên'}
+                okText={editing ? "Cập nhật" : "Thêm sinh viên"}
+                cancelText={"Hủy"}
                 onCancel={() => setOpen(false)}
                 onOk={() => form.submit()}
                 confirmLoading={loadingSubmit}

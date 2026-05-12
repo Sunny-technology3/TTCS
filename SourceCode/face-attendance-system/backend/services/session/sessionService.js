@@ -58,6 +58,15 @@ const updateSessionService = async ({ sessionId, name, startTime, endTime, statu
         throw new AppError(404, "Không tìm thấy phiên học");
     }
 
+    if (session.status !== "not_started") {
+        const message =
+            session.status === "started"
+                ? "Buổi học đã bắt đầu, không thể chỉnh sửa"
+                : "Buổi học đã kết thúc, không thể chỉnh sửa";
+
+        throw new AppError(400, message);
+    }
+
     if (session.classId.lecturerId.toString() !== lecturerId.toString()) {
         throw new AppError(403, "Bạn không có quyền sửa phiên học này");
     }

@@ -211,6 +211,7 @@ function ClassList() {
         open={open}
         title={editingClass ? "Sửa lớp học" : "Thêm lớp học"}
         okText={editingClass ? "Cập nhật" : "Tạo lớp"}
+        cancelText={"Hủy"}
         onCancel={() => {
           setOpen(false);
           setEditingClass(null);

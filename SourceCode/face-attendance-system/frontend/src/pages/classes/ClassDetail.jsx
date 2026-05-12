@@ -1,12 +1,28 @@
-import { Tabs, Typography, Breadcrumb, message, Spin, Button, Space } from 'antd';
+import {
+    Tabs,
+    Typography,
+    Breadcrumb,
+    message,
+    Spin,
+    Button,
+    Space,
+    Form,
+    Modal,
+    Input,
+} from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import StudentTab from './features/StudentTab';
 import SessionTab from './features/SessionTab';
 import { useState } from 'react';
 import attendanceApi from '../../api/attendanceApi';
-import { DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+    DownloadOutlined,
+    ReloadOutlined,
+    EditOutlined,
+} from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import useClassDetail from '../../hooks/useClassDetail';
+import classApi from '../../api/classApi';
 
 const { Title } = Typography;
 
@@ -15,6 +31,17 @@ function ClassDetail() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [exporting, setExporting] = useState(false);
+    const [open, setOpen] = useState(false);
+    const [form] = Form.useForm();
+
+    const openEdit = () => {
+        form.setFieldsValue({
+            name: classData?.name,
+            cameraUrl: classData?.cameraUrl,
+        });
+
+        setOpen(true);
+    };
 
     const {
         classDetail: classData,
@@ -42,6 +69,30 @@ function ClassDetail() {
                 studentCount: newStudents.length,
             })
         );
+    };
+
+    const handleSubmit = async (values) => {
+        try {
+            await classApi.updateClass(classId, values);
+
+            queryClient.invalidateQueries({
+                queryKey: ["classDetail", classId],
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: ["allClass"],
+            });
+
+            message.success("Cập nhật lớp thành công");
+
+            setOpen(false);
+        } catch (error) {
+            console.log(error);
+            message.error(
+                error?.response?.data?.message ||
+                "Cập nhật thất bại"
+            );
+        }
     };
 
     const getDownloadFileName = (contentDisposition) => {
@@ -119,6 +170,13 @@ function ClassDetail() {
 
                     <Space>
                         <Button
+                            icon={<EditOutlined />}
+                            onClick={openEdit}
+                        >
+                            Sửa lớp
+                        </Button>
+
+                        <Button
                             icon={<DownloadOutlined />}
                             loading={exporting}
                             onClick={handleExportAttendance}
@@ -165,6 +223,35 @@ function ClassDetail() {
                     />
                 )}
             </Spin>
+
+            <Modal
+                open={open}
+                title={"Sửa lớp học"}
+                okText={"Cập nhật"}
+                cancelText={"Hủy"}
+                onCancel={() => setOpen(false)}
+                onOk={() => form.submit()}
+            >
+                <Form form={form} layout="vertical" onFinish={handleSubmit}>
+
+                    <Form.Item
+                        name="name"
+                        label="Tên lớp"
+                        rules={[{ required: true, message: "Vui lòng nhập tên lớp" }]}
+                    >
+                        <Input placeholder="Nhập tên lớp học" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="cameraUrl"
+                        label="Camera URL"
+                        rules={[{ required: true, message: "Vui lòng nhập Camera url" }]}
+                    >
+                        <Input placeholder="VD: http://192.168.1.5:8080/video" />
+                    </Form.Item>
+
+                </Form>
+            </Modal>
         </div>
     );
 };

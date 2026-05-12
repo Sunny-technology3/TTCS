@@ -36,6 +36,12 @@ const ATTENDANCE_STATUS_MAP = {
     absent: { label: "Vắng mặt", color: "red" },
 };
 
+const SESSION_STATUS_MAP = {
+    not_started: { label: "Chưa bắt đầu", color: "blue" },
+    in_progress: { label: "Đang diễn ra", color: "green" },
+    finished: { label: "Đã kết thúc", color: "red" },
+};
+
 function SessionCameraPage() {
     const { classId, sessionId } = useParams();
     const navigate = useNavigate();
@@ -64,7 +70,7 @@ function SessionCameraPage() {
         total: attendanceData?.length || 0,
     };
 
-    const recognizedStudents = attendanceData.filter(
+    const recognizedStudents = (attendanceData || []).filter(
         (item) => item.status !== "absent"
     );
 
@@ -220,24 +226,18 @@ function SessionCameraPage() {
                                     }}
                                 >
                                     <Tag
-                                        color={
-                                            sessionData?.status === "in_progress"
-                                                ? "green"
-                                                : "red"
-                                        }
+                                        color={SESSION_STATUS_MAP[sessionData?.status]?.color}
                                         style={{
                                             padding: "6px 14px",
                                             fontSize: 14,
                                         }}
                                     >
-                                        {sessionData?.status === "in_progress"
-                                            ? "Đang hoạt động"
-                                            : "Đã kết thúc"}
+                                        {SESSION_STATUS_MAP[sessionData?.status]?.label}
                                     </Tag>
 
                                     <Button
                                         icon={<ReloadOutlined />}
-                                        onClick={refetch}
+                                        onClick={() => refetch()}
                                         loading={attendanceLoading}
                                     >
                                         Làm mới
