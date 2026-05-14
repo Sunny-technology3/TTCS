@@ -10,6 +10,9 @@ import {
     message,
     Popconfirm,
     Select,
+    Avatar,
+    Typography,
+    Checkbox,
 } from 'antd';
 import {
     PlusOutlined,
@@ -22,6 +25,8 @@ import { useState } from 'react';
 import studentApi from '../../../api/studentApi';
 import { normalizeText } from '../../../utils/string';
 
+const { Text } = Typography;
+
 function StudentTab({ students, classId, onStudentChange }) {
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -30,19 +35,26 @@ function StudentTab({ students, classId, onStudentChange }) {
     const [loadingSubmit, setLoadingSubmit] = useState(false);
     const [searchType, setSearchType] = useState("studentId");
     const [searchText, setSearchText] = useState("");
+    const [updateAvatar, setUpdateAvatar] = useState(false);
 
     const openAdd = () => {
         setEditing(null);
+
         form.resetFields();
+
         setOpen(true);
     };
 
     const openEdit = (record) => {
         setEditing(record);
+
         form.setFieldsValue({
             fullName: record.fullName,
             studentId: record.studentId,
+            updateAvatar: false,
         });
+
+        setUpdateAvatar(false);
         setOpen(true);
     };
 
@@ -56,14 +68,18 @@ function StudentTab({ students, classId, onStudentChange }) {
             formData.append("studentId", values.studentId);
             formData.append("classId", classId);
 
-            const fileObj = values.avatar?.file;
+            const file = values.avatar?.fileList?.[0]?.originFileObj;
 
-            if (fileObj) {
-                formData.append("file", fileObj.originFileObj || fileObj);
+            if (file) {
+                formData.append("file", file);
             }
 
+            formData.append("updateAvatar", updateAvatar);
+
+            let res;
+
             if (editing) {
-                const res = await studentApi.updateStudent(editing._id, formData);
+                res = await studentApi.updateStudent(editing._id, formData);
 
                 const updatedStudent = data.map((s) =>
                     s._id === editing._id ? res.data.data : s
@@ -74,7 +90,7 @@ function StudentTab({ students, classId, onStudentChange }) {
 
                 message.success("Cập nhật sinh viên thành công");
             } else {
-                const res = await studentApi.createStudent(formData);
+                res = await studentApi.createStudent(formData);
 
                 const newStudent = [...data, res.data.data];
 
@@ -119,6 +135,19 @@ function StudentTab({ students, classId, onStudentChange }) {
     });
 
     const columns = [
+        {
+            title: 'Ảnh',
+            dataIndex: 'avatarUrl',
+            width: 80,
+            align: 'center',
+            render: (value, record) => (
+                <Avatar
+                    src={value}
+                    alt={record.fullName}
+                    size={42}
+                />
+            )
+        },
         { title: 'Mã sinh viên', dataIndex: 'studentId' },
         { title: 'Họ và tên', dataIndex: 'fullName' },
         {
@@ -269,13 +298,78 @@ function StudentTab({ students, classId, onStudentChange }) {
                     </Form.Item>
 
                     {!editing && (
-                        <Form.Item name="avatar" label="Ảnh">
-                            <Upload beforeUpload={() => false} listType="picture">
+                        <Form.Item
+                            name="avatar"
+                            label="Ảnh khuôn mặt"
+                            valuePropName="fileList"
+                            getValueFromEvent={(e) => e?.fileList}
+                            rules={[{ required: true, message: 'Vui lòng upload ảnh khuôn mặt' }]}
+                        >
+                            <Upload
+                                beforeUpload={() => false}
+                                maxCount={1}
+                                listType="picture"
+                            >
                                 <Button icon={<UploadOutlined />}>
-                                    Upload ảnh
+                                    Chọn ảnh
                                 </Button>
                             </Upload>
+
+                            <Text
+                                type="secondary"
+                                style={{
+                                    display: "block",
+                                    marginTop: 8,
+                                    fontSize: 12,
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                Vui lòng sử dụng ảnh chân dung chính diện (từ cổ trở lên),
+                                rõ nét, đủ sáng và không có nhiều người trong ảnh.
+                            </Text>
                         </Form.Item>
+                    )}
+
+                    {editing && (
+                        <>
+                            <Form.Item
+                                name="updateAvatar"
+                                valuePropName="checked"
+                            >
+                                <Checkbox
+                                    onChange={(e) => setUpdateAvatar(e.target.checked)}
+                                >
+                                    Cập nhật ảnh khuôn mặt
+                                </Checkbox>
+                            </Form.Item>
+
+                            {updateAvatar && (
+                                <Form.Item
+                                    name="avatar"
+                                    valuePropName="fileList"
+                                    getValueFromEvent={(e) => e?.fileList}
+                                >
+                                    <Upload beforeUpload={() => false} maxCount={1}>
+                                        <Button icon={<UploadOutlined />}>
+                                            Upload ảnh mới
+                                        </Button>
+                                    </Upload>
+
+                                    <Text
+                                        type="secondary"
+                                        style={{
+                                            display: "block",
+                                            marginTop: 8,
+                                            fontSize: 12,
+                                            lineHeight: 1.5,
+                                        }}
+                                    >
+                                        Vui lòng sử dụng ảnh chân dung chính diện (từ cổ trở lên),
+                                        rõ nét, đủ sáng và không có nhiều người trong ảnh.
+                                    </Text>
+                                </Form.Item>
+                            )}
+                        </>
                     )}
                 </Form>
             </Modal>

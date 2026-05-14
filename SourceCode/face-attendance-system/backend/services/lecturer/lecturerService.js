@@ -3,7 +3,7 @@ const Lecturer = require("../../models/lecturer");
 const AppError = require("../../utils/appError");
 
 const getLecturerService = async (lecturerId) => {
-    const lecturer = await Lecturer.findById(lecturerId);
+    const lecturer = await Lecturer.findById(lecturerId).select("-password");
 
     return lecturer;
 };

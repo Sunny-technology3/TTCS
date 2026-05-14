@@ -29,7 +29,7 @@ const createStudent = asyncHandler(async (req, res) => {
 
 const updateStudent = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { studentId, fullName } = req.body;
+    const { studentId, fullName, updateAvatar } = req.body;
     const { id: lecturerId } = req.user;
 
     const student = await updateStudentService({
@@ -37,6 +37,9 @@ const updateStudent = asyncHandler(async (req, res) => {
         studentCode: studentId,
         fullName,
         lecturerId,
+        updateAvatar:
+            updateAvatar === "true",
+        file: req.file,
     });
 
     return res.status(200).json({

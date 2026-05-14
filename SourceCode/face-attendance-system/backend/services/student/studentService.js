@@ -90,7 +90,14 @@ const createStudentService = async ({ studentId, fullName, classId, lecturerId, 
     return result;
 };
 
-const updateStudentService = async ({ studentId, studentCode, fullName, lecturerId }) => {
+const updateStudentService = async ({
+    studentId,
+    studentCode,
+    fullName,
+    lecturerId,
+    file,
+    updateAvatar,
+}) => {
     const student = await Student.findById(studentId).populate("classId");
     if (!student) {
         throw new AppError(404, "Không tìm thấy sinh viên");
@@ -101,7 +108,56 @@ const updateStudentService = async ({ studentId, studentCode, fullName, lecturer
     }
 
     student.studentId = studentCode ?? student.studentId;
-    student.fullName = fullName ?? student.name;
+    student.fullName = fullName ?? student.fullName;
+
+    if (updateAvatar && file) {
+        const safeClassName = student.classId.name
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g, "_")
+            .replace(/[^a-zA-Z0-9_]/g, "");
+
+        const folder = `students/${safeClassName}/${student.studentId}`;
+        const fileName = `avatar_${student.studentId}`;
+
+        const { url } = await uploadToR2(
+            file,
+            folder,
+            fileName
+        );
+
+        student.avatarUrl = url;
+
+        const formData = new FormData();
+
+        formData.append(
+            "file",
+            file.buffer,
+            file.originalname
+        );
+
+        const aiRes = await axios.post(
+            "http://localhost:8000/api/face/register",
+            formData,
+            {
+                headers: formData.getHeaders(),
+            }
+        );
+
+        if (!aiRes.data.success) {
+            throw new AppError(
+                400,
+                aiRes.data.message || "Lỗi tạo embedding"
+            );
+        }
+
+        const embedding = aiRes.data.data.embedding;
+
+        await FaceEmbedding.findOneAndUpdate(
+            { studentId: student._id },
+            { embedding }
+        );
+    }
 
     await student.save();
 
