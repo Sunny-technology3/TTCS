@@ -12,7 +12,11 @@ import {
     Spin,
     message,
     Breadcrumb,
+    Tabs,
+    Empty,
+    Input,
 } from "antd";
+import { useState } from "react";
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     VideoCameraOutlined,
@@ -21,6 +25,7 @@ import {
     StopOutlined,
     ReloadOutlined,
     ClockCircleOutlined,
+    SearchOutlined,
 } from "@ant-design/icons";
 import useClassDetail from "../../hooks/useClassDetail";
 import useSessionDetail from "../../hooks/useSessionDetail";
@@ -29,6 +34,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import sessionApi from "../../api/sessionApi";
 const { Title, Text } = Typography;
 import dayjs from 'dayjs';
+import { normalizeText } from "../../utils/string";
 
 const ATTENDANCE_STATUS_MAP = {
     present: { label: "Có mặt", color: "green" },
@@ -46,6 +52,7 @@ function SessionCameraPage() {
     const { classId, sessionId } = useParams();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const [searchText, setSearchText] = useState("");
 
     const {
         classDetail: classData,
@@ -72,6 +79,30 @@ function SessionCameraPage() {
 
     const recognizedStudents = (attendanceData || []).filter(
         (item) => item.status !== "absent"
+    );
+
+    const filterStudents = (list) => {
+        const keyword = normalizeText(searchText);
+
+        return list.filter((item) => {
+            const fullName = normalizeText(item.fullName || "");
+            const studentId = normalizeText(item.studentId || "");
+
+            return (
+                fullName.includes(keyword) ||
+                studentId.includes(keyword)
+            );
+        });
+    };
+
+    const filteredRecognizedStudents = filterStudents(
+        recognizedStudents
+    );
+
+    const filteredAbsentStudents = filterStudents(
+        (attendanceData || []).filter(
+            (item) => item.status === "absent"
+        )
     );
 
     const handleUpdateSessionStatus = async (status) => {
@@ -126,7 +157,17 @@ function SessionCameraPage() {
                         )
                     },
                     {
-                        title: sessionData?.name || "Camera realtime"
+                        title: (
+                            <span
+                                style={{ cursor: 'pointer', color: '#1677ff' }}
+                                onClick={() => navigate(`/classes/${classId}/sessions/${sessionId}`)}
+                            >
+                                {sessionData?.name || "Đang tải..."}
+                            </span>
+                        )
+                    },
+                    {
+                        title: "Camera realtime"
                     }
                 ]}
             />
@@ -298,43 +339,120 @@ function SessionCameraPage() {
                                 title="Kết quả điểm danh"
                                 style={{ height: "100%" }}
                             >
-                                <List
-                                    itemLayout="horizontal"
-                                    dataSource={recognizedStudents}
-                                    renderItem={(item) => (
-                                        <List.Item>
-                                            <List.Item.Meta
-                                                avatar={
-                                                    <Avatar
-                                                        icon={<UserOutlined />}
-                                                    />
-                                                }
-                                                title={
-                                                    <Space>
-                                                        <Text strong>
-                                                            {item.fullName}
-                                                        </Text>
-                                                        {ATTENDANCE_STATUS_MAP[item.status] && (
-                                                            <Tag color={ATTENDANCE_STATUS_MAP[item.status].color}>
-                                                                {ATTENDANCE_STATUS_MAP[item.status].label}
-                                                            </Tag>
-                                                        )}
-                                                    </Space>
-                                                }
-                                                description={
-                                                    <>
-                                                        <div>
-                                                            Mã sinh viên: {item.studentId}
-                                                        </div>
+                                <Input
+                                    allowClear
+                                    placeholder="Tìm mã sinh viên hoặc họ tên..."
+                                    prefix={<SearchOutlined />}
+                                    value={searchText}
+                                    onChange={(e) => setSearchText(e.target.value)}
+                                    style={{ marginBottom: 16 }}
+                                />
 
-                                                        <div>
-                                                            Check-in: {item.checkIn ? dayjs(item.checkIn).format('DD/MM/YYYY HH:mm') : "---"}
-                                                        </div>
-                                                    </>
-                                                }
-                                            />
-                                        </List.Item>
-                                    )}
+                                <Tabs
+                                    items={[
+                                        {
+                                            key: "recognized",
+                                            label: `Đã điểm danh (${recognizedStudents.length})`,
+                                            children: (
+                                                recognizedStudents.length > 0 ? (
+                                                    <List
+                                                        itemLayout="horizontal"
+                                                        dataSource={filteredRecognizedStudents}
+                                                        renderItem={(item) => (
+                                                            <List.Item>
+                                                                <List.Item.Meta
+                                                                    avatar={
+                                                                        <Avatar src={item.avatarUrl} />
+                                                                    }
+                                                                    title={
+                                                                        <Space>
+                                                                            <Text strong>
+                                                                                {item.fullName}
+                                                                            </Text>
+
+                                                                            {ATTENDANCE_STATUS_MAP[item.status] && (
+                                                                                <Tag color={ATTENDANCE_STATUS_MAP[item.status].color}>
+                                                                                    {ATTENDANCE_STATUS_MAP[item.status].label}
+                                                                                </Tag>
+                                                                            )}
+                                                                        </Space>
+                                                                    }
+                                                                    description={
+                                                                        <>
+                                                                            <div>
+                                                                                Mã sinh viên: {item.studentId}
+                                                                            </div>
+
+                                                                            <div>
+                                                                                Check-in: {
+                                                                                    item.checkIn
+                                                                                        ? dayjs(item.checkIn).format('DD/MM/YYYY HH:mm')
+                                                                                        : "---"
+                                                                                }
+                                                                            </div>
+                                                                        </>
+                                                                    }
+                                                                />
+                                                            </List.Item>
+                                                        )}
+                                                    />
+                                                ) : (
+                                                    <Empty
+                                                        description={
+                                                            searchText
+                                                                ? "Không tìm thấy sinh viên"
+                                                                : "Chưa có sinh viên điểm danh"
+                                                        }
+                                                    />
+                                                )
+                                            )
+                                        },
+                                        {
+                                            key: "absent",
+                                            label: `Chưa điểm danh (${stats.absent})`,
+                                            children: (
+                                                stats.absent > 0 ? (
+                                                    <List
+                                                        itemLayout="horizontal"
+                                                        dataSource={filteredAbsentStudents}
+                                                        renderItem={(item) => (
+                                                            <List.Item>
+                                                                <List.Item.Meta
+                                                                    avatar={
+                                                                        <Avatar src={item.avatarUrl} />
+                                                                    }
+                                                                    title={
+                                                                        <Text strong>
+                                                                            {item.fullName}
+                                                                        </Text>
+                                                                    }
+                                                                    description={
+                                                                        <>
+                                                                            <div>
+                                                                                Mã sinh viên: {item.studentId}
+                                                                            </div>
+
+                                                                            <Tag color="red">
+                                                                                Vắng mặt
+                                                                            </Tag>
+                                                                        </>
+                                                                    }
+                                                                />
+                                                            </List.Item>
+                                                        )}
+                                                    />
+                                                ) : (
+                                                    <Empty
+                                                        description={
+                                                            searchText
+                                                                ? "Không tìm thấy sinh viên"
+                                                                : "Tất cả sinh viên đã điểm danh"
+                                                        }
+                                                    />
+                                                )
+                                            )
+                                        }
+                                    ]}
                                 />
                             </Card>
                         </Col>

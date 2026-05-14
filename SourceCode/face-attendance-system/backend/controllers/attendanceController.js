@@ -43,6 +43,7 @@ const getAttendanceBySession = asyncHandler(async (req, res) => {
             _id: row._id,
             fullName: row.fullName,
             studentId: row.studentId,
+            avatarUrl: row.avatarUrl,
             checkIn: row.checkIn,
             status: row.status,
         })),

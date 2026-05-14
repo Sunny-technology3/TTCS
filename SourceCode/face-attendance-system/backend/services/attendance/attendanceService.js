@@ -54,7 +54,7 @@ const getSessionAttendanceData = async ({
     }
 
     const students = await Student.find({ classId: session.classId._id })
-        .sort({ studentId: 1, fullName: 1 })
+        .sort({ studentId: 1, fullName: 1, avatarUrl: 1 })
         .lean();
 
     const attendances = await Attendance.find({ sessionId }).lean();
@@ -71,6 +71,7 @@ const getSessionAttendanceData = async ({
             index: index + 1,
             fullName: student.fullName,
             studentId: student.studentId,
+            avatarUrl: student.avatarUrl,
             checkIn: attendance?.checkIn || null,
             checkInText: formatCheckIn(attendance?.checkIn),
             status,
@@ -190,14 +191,32 @@ const updateAttendanceStatusService = async ({ studentId, sessionId, status, lec
         throw new AppError(403, "Bạn không có quyền cập nhật trạng thái phiên học này");
     }
 
+    if (session.status === "finished") {
+        throw new AppError(
+            400,
+            "Phiên học đã kết thúc, không thể cập nhật điểm danh"
+        );
+    }
+
     const student = await Student.findById(studentId);
     if (!student) {
         throw new AppError(404, "Không tìm thấy sinh viên");
     }
 
-    const attendance = await Attendance.findOne({ sessionId, studentId });
+    let attendance = await Attendance.findOne({ sessionId, studentId });
     if (attendance) {
-        throw new AppError(400, "Sinh viên đã điểm danh rồi");
+        attendance.status = status;
+
+        attendance.checkIn = new Date();
+
+        await attendance.save();
+    } else {
+        attendance = await Attendance.create({
+            studentId,
+            sessionId,
+            checkIn: new Date(),
+            status,
+        });
     }
 
     const result = await Attendance.create({

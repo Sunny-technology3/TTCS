@@ -13,6 +13,7 @@ import {
     Form,
     DatePicker,
     Modal,
+    Alert,
 } from 'antd';
 import {
     ReloadOutlined,
@@ -83,9 +84,9 @@ function SessionDetail() {
             const updated = res.data.data;
 
             queryClient.setQueryData(
-                ["attendanceBySession", classId, sessionId],
+                ["attendanceBySession", classId, sessionId, statusFilter],
                 (oldData) =>
-                    oldData.map((item) =>
+                    (oldData || []).map((item) =>
                         item._id === studentId
                             ? { ...item, ...updated }
                             : item
@@ -105,7 +106,7 @@ function SessionDetail() {
 
             queryClient.setQueryData(
                 ["sessionDetail", sessionId],
-                (oldData) => ({
+                (oldData = {}) => ({
                     ...oldData,
                     status,
                 })
@@ -128,7 +129,7 @@ function SessionDetail() {
             });
 
             queryClient.invalidateQueries({
-                queryKey: ["attendanceBySession", classId, sessionId]
+                queryKey: ["attendanceBySession", classId, sessionId, statusFilter]
             });
 
             message.success("Điểm danh tất cả thành công");
@@ -237,6 +238,8 @@ function SessionDetail() {
         return value.includes(keyword);
     });
 
+    const isFinished = sessionData?.status === "finished" || false;
+
     const columns = [
         { title: 'Mã sinh viên', dataIndex: 'studentId' },
         { title: 'Họ và tên', dataIndex: 'fullName' },
@@ -261,40 +264,52 @@ function SessionDetail() {
         },
         {
             title: 'Thao tác',
-            align: 'left',
-            width: 180,
+            width: 220,
             render: (_, record) => (
-                <Space>
-                    <Tooltip title="Có mặt">
-                        <Button
-                            type="text"
-                            icon={<PlayCircleOutlined />}
-                            disabled={record.status !== "absent"}
-                            onClick={() =>
-                                handleUpdateAttendanceStatus(
-                                    sessionId,
-                                    record._id,
-                                    "present",
-                                )
-                            }
-                        />
-                    </Tooltip>
-
-                    <Tooltip title="Đến muộn">
-                        <Button
-                            type="text"
-                            icon={<StopOutlined />}
-                            disabled={record.status !== "absent"}
-                            onClick={() =>
-                                handleUpdateAttendanceStatus(
-                                    sessionId,
-                                    record._id,
-                                    "late",
-                                )
-                            }
-                        />
-                    </Tooltip>
-                </Space>
+                <Select
+                    value={record.status}
+                    style={{ width: 140 }}
+                    disabled={isFinished}
+                    onChange={(value) =>
+                        handleUpdateAttendanceStatus(
+                            sessionId,
+                            record._id,
+                            value
+                        )
+                    }
+                    options={[
+                        {
+                            label: (
+                                <Space>
+                                    <Tag color="green">
+                                        Có mặt
+                                    </Tag>
+                                </Space>
+                            ),
+                            value: "present",
+                        },
+                        {
+                            label: (
+                                <Space>
+                                    <Tag color="orange">
+                                        Đi muộn
+                                    </Tag>
+                                </Space>
+                            ),
+                            value: "late",
+                        },
+                        {
+                            label: (
+                                <Space>
+                                    <Tag color="red">
+                                        Vắng mặt
+                                    </Tag>
+                                </Space>
+                            ),
+                            value: "absent",
+                        },
+                    ]}
+                />
             )
         },
     ];
@@ -326,6 +341,16 @@ function SessionDetail() {
                     { title: (<span>{sessionData?.name || "Đang tải..."}</span>) }
                 ]}
             />
+
+            {sessionData?.status === "finished" && (
+                <Alert
+                    type="warning"
+                    showIcon
+                    style={{ marginTop: 16 }}
+                    message="Phiên học đã kết thúc"
+                    description="Bạn chỉ có thể xem kết quả điểm danh, không thể chỉnh sửa dữ liệu."
+                />
+            )}
 
             <Spin spinning={attendanceLoading || classLoading || sessionLoading}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
