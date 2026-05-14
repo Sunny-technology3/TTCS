@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
-const Lecturer = require("../../models/lecturer");
 const bcrypt = require("bcryptjs");
+const Lecturer = require("../../models/lecturer");
 const AppError = require("../../utils/appError");
 require("dotenv").config();
 

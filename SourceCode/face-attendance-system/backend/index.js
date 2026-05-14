@@ -9,8 +9,8 @@ app.use(express.json());
 const mongoose = require("mongoose");
 require("dotenv").config();
 
-const LoginRoutes = require("./routes/loginRoutes");
-app.use("/api/login", LoginRoutes);
+const AuthRoutes = require("./routes/authRoutes");
+app.use("/api/login", AuthRoutes);
 
 const LecturerRoutes = require("./routes/lecturerRoutes");
 app.use("/api/lecturers", LecturerRoutes);

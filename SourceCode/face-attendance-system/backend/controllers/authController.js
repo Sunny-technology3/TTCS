@@ -1,5 +1,5 @@
 const asyncHandler = require("../utils/asyncHandler");
-const { loginService } = require("../services/auth/loginService");
+const { loginService } = require("../services/auth/authService");
 
 const login = asyncHandler(async (req, res) => {
     const { username, password } = req.body;
