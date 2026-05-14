@@ -9,6 +9,8 @@ import {
   Modal,
   Input,
   Button,
+  Row,
+  Col,
 } from 'antd';
 import {
   UserOutlined,
@@ -90,51 +92,72 @@ function AppHeader() {
     <>
       <Header
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
           background: '#fff',
-          padding: '0 24px',
-          borderBottom: '1px solid #eee'
+          padding: '0 16px',
+          borderBottom: '1px solid #eee',
+          height: 'auto',
+          lineHeight: 'normal',
         }}
       >
-        <div
-          onClick={() => navigate('/classes')}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            cursor: "pointer",
-          }}
+        <Row
+          align="middle"
+          justify="space-between"
+          wrap={true}
         >
-          <img
-            src="/logo.png"
-            alt="logo"
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-              objectFit: "contain",
-            }}
-          />
+          <Col xs={24} md={12}>
+            <div
+              onClick={() => navigate('/classes')}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                cursor: "pointer",
+                flexWrap: 'wrap',
+              }}
+            >
+              <img
+                src="/logo.png"
+                alt="logo"
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: "50%",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                  objectFit: "contain",
+                }}
+              />
 
-          <span
+              <span
+                style={{
+                  fontWeight: 600,
+                  fontSize: 20,
+                  lineHeight: 1.2,
+                }}
+              >
+                Hệ thống điểm danh sinh viên
+              </span>
+            </div>
+          </Col>
+
+          <Col
+            xs={24}
+            md={12}
             style={{
-              fontWeight: 600,
-              fontSize: 24,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              marginTop: 8,
             }}
           >
-            Hệ thống điểm danh sinh viên
-          </span>
-        </div>
-
-        <Dropdown menu={{ items }} placement="bottomRight">
-          <Space style={{ cursor: 'pointer' }}>
-            <Avatar icon={<UserOutlined />} />
-            <Text>{lecturer?.fullName || "Chưa có thông tin"}</Text>
-          </Space>
-        </Dropdown>
+            <Dropdown menu={{ items }} placement="bottomRight">
+              <Space style={{ cursor: 'pointer' }}>
+                <Avatar icon={<UserOutlined />} />
+                <Text>
+                  {lecturer?.fullName || "Chưa có thông tin"}
+                </Text>
+              </Space>
+            </Dropdown>
+          </Col>
+        </Row>
       </Header>
 
       <Modal

@@ -237,6 +237,7 @@ function SessionTab({ sessions, classId, onSessionChange }) {
             title: 'Thao tác',
             align: 'left',
             width: 180,
+            fixed: 'right',
             render: (_, record) => (
                 <Space>
                     <Tooltip title="Bắt đầu">
@@ -339,6 +340,7 @@ function SessionTab({ sessions, classId, onSessionChange }) {
                 dataSource={data}
                 columns={columns}
                 rowKey="_id"
+                scroll={{ x: "max-content" }}
                 locale={"Chưa có phiên học nào"}
             />
 

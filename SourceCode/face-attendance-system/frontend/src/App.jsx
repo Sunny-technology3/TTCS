@@ -16,25 +16,24 @@ function App() {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Content>
-        <Routes>
-          <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-            <Route path="/classes" element={<ClassList />} />
-            <Route path="/classes/:classId" element={<ClassDetail />} />
-            <Route path="/classes/:classId/sessions/:sessionId" element={<SessionDetail />} />
-            <Route
-              path="/classes/:classId/sessions/:sessionId/camera"
-              element={<SessionCameraPage />}
-            />
-          </Route>
+        <div className="app-container">
+          <Routes>
+            <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+              <Route path="/classes" element={<ClassList />} />
+              <Route path="/classes/:classId" element={<ClassDetail />} />
+              <Route path="/classes/:classId/sessions/:sessionId" element={<SessionDetail />} />
+              <Route path="/classes/:classId/sessions/:sessionId/camera" element={<SessionCameraPage />} />
+            </Route>
 
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<Login />} />
-            <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<Login />} />
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </div>
       </Content>
     </Layout>
   );
-};
+}
 
 export default App;

@@ -9,6 +9,8 @@ import {
     Form,
     Modal,
     Input,
+    Row,
+    Col,
 } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import StudentTab from './features/StudentTab';
@@ -35,6 +37,8 @@ function ClassDetail() {
     const [form] = Form.useForm();
 
     const openEdit = () => {
+        if (!classData) return;
+
         form.setFieldsValue({
             name: classData?.name,
             cameraUrl: classData?.cameraUrl,
@@ -150,7 +154,11 @@ function ClassDetail() {
                         title: (
                             <span
                                 onClick={() => navigate('/classes')}
-                                style={{ cursor: 'pointer', color: '#1677ff' }}
+                                style={{
+                                    cursor: 'pointer',
+                                    color: '#1677ff',
+                                    fontWeight: 500,
+                                }}
                             >
                                 Danh sách lớp học
                             </span>
@@ -163,36 +171,42 @@ function ClassDetail() {
             />
 
             <Spin spinning={classLoading}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                    <Title level={3} style={{ margin: 0 }}>
-                        {classData?.name ? classData.name : "Đang tải..."}
-                    </Title>
+                <Row
+                    gutter={[12, 12]}
+                    align="middle"
+                    justify="space-between"
+                    style={{ marginTop: 10 }}
+                >
+                    <Col xs={24} md={12}>
+                        <Title level={3} style={{ margin: 0 }}>
+                            {classData?.name ? classData.name : "Đang tải..."}
+                        </Title>
+                    </Col>
 
-                    <Space>
-                        <Button
-                            icon={<EditOutlined />}
-                            onClick={openEdit}
-                        >
-                            Sửa lớp
-                        </Button>
+                    <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+                        <Space wrap>
+                            <Button icon={<EditOutlined />} onClick={openEdit}>
+                                Sửa lớp
+                            </Button>
 
-                        <Button
-                            icon={<DownloadOutlined />}
-                            loading={exporting}
-                            onClick={handleExportAttendance}
-                        >
-                            Xuất Excel điểm danh
-                        </Button>
+                            <Button
+                                icon={<DownloadOutlined />}
+                                loading={exporting}
+                                onClick={handleExportAttendance}
+                            >
+                                Xuất Excel
+                            </Button>
 
-                        <Button
-                            icon={<ReloadOutlined />}
-                            onClick={() => refetch()}
-                            loading={classLoading}
-                        >
-                            Làm mới
-                        </Button>
-                    </Space>
-                </div>
+                            <Button
+                                icon={<ReloadOutlined />}
+                                onClick={() => refetch()}
+                                loading={classLoading}
+                            >
+                                Làm mới
+                            </Button>
+                        </Space>
+                    </Col>
+                </Row>
 
                 {!classData ? null : (
                     <Tabs

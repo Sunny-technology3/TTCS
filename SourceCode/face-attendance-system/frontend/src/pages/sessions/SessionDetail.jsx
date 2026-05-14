@@ -14,6 +14,9 @@ import {
     DatePicker,
     Modal,
     Alert,
+    Row,
+    Col,
+    Avatar,
 } from 'antd';
 import {
     ReloadOutlined,
@@ -241,6 +244,19 @@ function SessionDetail() {
     const isFinished = sessionData?.status === "finished" || false;
 
     const columns = [
+        {
+            title: 'Ảnh',
+            dataIndex: 'avatarUrl',
+            width: 80,
+            align: 'center',
+            render: (value, record) => (
+                <Avatar
+                    src={value}
+                    alt={record.fullName}
+                    size={42}
+                />
+            )
+        },
         { title: 'Mã sinh viên', dataIndex: 'studentId' },
         { title: 'Họ và tên', dataIndex: 'fullName' },
         {
@@ -264,11 +280,12 @@ function SessionDetail() {
         },
         {
             title: 'Thao tác',
-            width: 220,
+            width: 160,
+            fixed: 'right',
             render: (_, record) => (
                 <Select
                     value={record.status}
-                    style={{ width: 140 }}
+                    style={{ width: 120 }}
                     disabled={isFinished}
                     onChange={(value) =>
                         handleUpdateAttendanceStatus(
@@ -353,82 +370,91 @@ function SessionDetail() {
             )}
 
             <Spin spinning={attendanceLoading || classLoading || sessionLoading}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                    <Title level={3} style={{ margin: 0 }}>
-                        {sessionData?.name ? sessionData.name : "Đang tải..."} - Điểm danh
-                    </Title>
+                <Row
+                    gutter={[12, 12]}
+                    align="middle"
+                    justify="space-between"
+                    style={{ marginTop: 10 }}
+                >
+                    <Col xs={24} md={12}>
+                        <Title level={3} style={{ margin: 0 }}>
+                            {sessionData?.name ? sessionData.name : "Đang tải..."} - Điểm danh
+                        </Title>
+                    </Col>
 
-                    <Space>
-                        <Button
-                            icon={<EditOutlined />}
-                            disabled={sessionData?.status !== "not_started"}
-                            onClick={handleOpenEdit}
-                        >
-                            Sửa phiên học
-                        </Button>
-
-                        <Tooltip title="Bắt đầu">
+                    <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+                        <Space wrap>
                             <Button
-                                icon={<PlayCircleOutlined />}
+                                icon={<EditOutlined />}
                                 disabled={sessionData?.status !== "not_started"}
-                                onClick={() => handleUpdateSessionStatus("in_progress")}
+                                onClick={handleOpenEdit}
                             >
-                                Bắt đầu
+                                Sửa phiên học
                             </Button>
-                        </Tooltip>
 
-                        <Tooltip title="Kết thúc">
+                            <Tooltip title="Bắt đầu">
+                                <Button
+                                    icon={<PlayCircleOutlined />}
+                                    disabled={sessionData?.status !== "not_started"}
+                                    onClick={() => handleUpdateSessionStatus("in_progress")}
+                                >
+                                    Bắt đầu
+                                </Button>
+                            </Tooltip>
+
+                            <Tooltip title="Kết thúc">
+                                <Button
+                                    icon={<StopOutlined />}
+                                    danger
+                                    disabled={sessionData?.status !== "in_progress"}
+                                    onClick={() => handleUpdateSessionStatus("finished")}
+                                >
+                                    Kết thúc
+                                </Button>
+                            </Tooltip>
+
                             <Button
-                                icon={<StopOutlined />}
-                                danger
+                                icon={<VideoCameraOutlined />}
                                 disabled={sessionData?.status !== "in_progress"}
-                                onClick={() => handleUpdateSessionStatus("finished")}
+                                onClick={() =>
+                                    navigate(
+                                        `/classes/${classId}/sessions/${sessionId}/camera`
+                                    )
+                                }
                             >
-                                Kết thúc
+                                Camera realtime
                             </Button>
-                        </Tooltip>
 
-                        <Button
-                            icon={<VideoCameraOutlined />}
-                            disabled={sessionData?.status !== "in_progress"}
-                            onClick={() =>
-                                navigate(
-                                    `/classes/${classId}/sessions/${sessionId}/camera`
-                                )
-                            }
-                        >
-                            Camera realtime
-                        </Button>
+                            <Tooltip title="Điểm danh tất cả">
+                                <Button
+                                    icon={<CheckOutlined />}
+                                    onClick={handleMarkAll}
+                                    loading={markingAll}
+                                >
+                                    Điểm danh tất cả
+                                </Button>
+                            </Tooltip>
 
-                        <Tooltip title="Điểm danh tất cả">
+                            <Tooltip title="Xuất Excel">
+                                <Button
+                                    icon={<DownloadOutlined />}
+                                    onClick={handleExportAttendance}
+                                    loading={exporting}
+                                >
+                                    Xuất Excel
+                                </Button>
+                            </Tooltip>
+
                             <Button
-                                icon={<CheckOutlined />}
-                                onClick={handleMarkAll}
-                                loading={markingAll}
+                                icon={<ReloadOutlined />}
+                                onClick={refetchAttendance}
+                                loading={attendanceLoading}
                             >
-                                Điểm danh tất cả
+                                Làm mới
                             </Button>
-                        </Tooltip>
-
-                        <Tooltip title="Xuất Excel">
-                            <Button
-                                icon={<DownloadOutlined />}
-                                onClick={handleExportAttendance}
-                                loading={exporting}
-                            >
-                                Xuất Excel
-                            </Button>
-                        </Tooltip>
-
-                        <Button
-                            icon={<ReloadOutlined />}
-                            onClick={refetchAttendance}
-                            loading={attendanceLoading}
-                        >
-                            Làm mới
-                        </Button>
-                    </Space>
-                </div>
+                        </Space>
+                    </Col>
+                </Row>
 
                 <div style={{ marginTop: 8, marginBottom: 16 }}>
                     <Space
@@ -437,6 +463,7 @@ function SessionDetail() {
                             justifyContent: "flex-end",
                             marginBottom: 12,
                         }}
+                        wrap
                     >
                         <Space.Compact>
                             <Select
@@ -510,6 +537,7 @@ function SessionDetail() {
                     dataSource={filteredData}
                     columns={columns}
                     rowKey="_id"
+                    scroll={{ x: "max-content" }}
                     locale={{
                         emptyText:
                             searchText || statusFilter

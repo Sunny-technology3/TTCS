@@ -181,6 +181,7 @@ function StudentTab({ students, classId, onStudentChange }) {
             title: 'Thao tác',
             align: 'left',
             width: 120,
+            fixed: 'right',
             render: (_, record) => (
                 <Space>
                     <Tooltip title="Sửa">
@@ -214,6 +215,7 @@ function StudentTab({ students, classId, onStudentChange }) {
                     justifyContent: "flex-end",
                     marginTop: 16,
                 }}
+                wrap
             >
                 <Space.Compact>
                     <Select
@@ -260,6 +262,7 @@ function StudentTab({ students, classId, onStudentChange }) {
                 dataSource={filteredData}
                 columns={columns}
                 rowKey="_id"
+                scroll={{ x: "max-content" }}
                 locale={{
                     emptyText: searchText
                         ? "Không tìm thấy sinh viên phù hợp"

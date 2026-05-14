@@ -300,7 +300,7 @@ function SessionCameraPage() {
                     </Card>
 
                     <Row gutter={20}>
-                        <Col span={16}>
+                        <Col xs={24} md={18}>
                             <Card
                                 title={
                                     <Space>
@@ -334,7 +334,7 @@ function SessionCameraPage() {
                             </Card>
                         </Col>
 
-                        <Col span={8}>
+                        <Col xs={24} md={6}>
                             <Card
                                 title="Kết quả điểm danh"
                                 style={{ height: "100%" }}
