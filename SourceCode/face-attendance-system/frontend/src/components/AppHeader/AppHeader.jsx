@@ -53,10 +53,34 @@ function AppHeader() {
       }}
     >
       <div
-        style={{ cursor: 'pointer', fontWeight: 600, fontSize: 18 }}
         onClick={() => navigate('/classes')}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          cursor: "pointer",
+        }}
       >
-        Hệ thống điểm danh sinh viên
+        <img
+          src="/logo.png"
+          alt="logo"
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: "50%",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+            objectFit: "contain",
+          }}
+        />
+
+        <span
+          style={{
+            fontWeight: 600,
+            fontSize: 24,
+          }}
+        >
+          Hệ thống điểm danh sinh viên
+        </span>
       </div>
 
       <Dropdown menu={{ items }} placement="bottomRight">
