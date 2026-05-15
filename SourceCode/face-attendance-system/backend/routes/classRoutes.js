@@ -4,16 +4,15 @@ const {
     getAllClass, getDetailClass,
     createClass, updateClass, deleteClass,
 } = require("../controllers/classController");
-const { verifyToken } = require("../middleware/verifyToken");
 
-router.get("/", verifyToken, getAllClass);
+router.get("/", getAllClass);
 
-router.get("/:classId", verifyToken, getDetailClass);
+router.get("/:classId", getDetailClass);
 
-router.post("/", verifyToken, createClass);
+router.post("/", createClass);
 
-router.put("/:classId", verifyToken, updateClass);
+router.put("/:classId", updateClass);
 
-router.delete("/:classId", verifyToken, deleteClass);
+router.delete("/:classId", deleteClass);
 
 module.exports = router;

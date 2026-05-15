@@ -12,6 +12,9 @@ require("dotenv").config();
 const AuthRoutes = require("./routes/authRoutes");
 app.use("/api/login", AuthRoutes);
 
+const { verifyToken } = require("./middleware/verifyToken");
+app.use("/api", verifyToken);
+
 const LecturerRoutes = require("./routes/lecturerRoutes");
 app.use("/api/lecturers", LecturerRoutes);
 

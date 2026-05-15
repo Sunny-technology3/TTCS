@@ -5,6 +5,7 @@ from routes.recognize_route import router as recognize_router
 app = FastAPI()
 
 app.include_router(register_router, prefix="/api/face")
+
 app.include_router(recognize_router, prefix="/api/attendance")
 
 @app.get("/")

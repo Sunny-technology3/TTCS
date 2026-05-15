@@ -4,14 +4,9 @@ const {
     getLecturer,
     changePassword,
 } = require("../controllers/lecturerController");
-const { verifyToken } = require("../middleware/verifyToken");
 
-router.get("/info", verifyToken, getLecturer);
+router.get("/info", getLecturer);
 
-router.put(
-    "/change-password",
-    verifyToken,
-    changePassword
-);
+router.put("/change-password", changePassword);
 
 module.exports = router;

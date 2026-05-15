@@ -35,6 +35,7 @@ import sessionApi from "../../api/sessionApi";
 const { Title, Text } = Typography;
 import dayjs from 'dayjs';
 import { normalizeText } from "../../utils/string";
+import attendanceStreamApi from "../../api/attendanceStreamApi";
 
 const ATTENDANCE_STATUS_MAP = {
     present: { label: "Có mặt", color: "green" },
@@ -278,7 +279,7 @@ function SessionCameraPage() {
 
                                     <Button
                                         icon={<ReloadOutlined />}
-                                        onClick={() => refetch()}
+                                        onClick={refetch}
                                         loading={attendanceLoading}
                                     >
                                         Làm mới
@@ -321,15 +322,25 @@ function SessionCameraPage() {
                                         alignItems: "center"
                                     }}
                                 >
-                                    <img
-                                        src={classData?.cameraUrl}
-                                        alt="camera"
-                                        style={{
-                                            width: "100%",
-                                            height: "100%",
-                                            objectFit: "cover"
-                                        }}
-                                    />
+                                    {
+                                        classData?.cameraUrl && (
+                                            <img
+                                                src={
+                                                    attendanceStreamApi.getVideoFeedUrl({
+                                                        classId,
+                                                        sessionId,
+                                                        cameraUrl: classData.cameraUrl
+                                                    })
+                                                }
+                                                alt="camera"
+                                                style={{
+                                                    width: "100%",
+                                                    height: "100%",
+                                                    objectFit: "cover"
+                                                }}
+                                            />
+                                        )
+                                    }
                                 </div>
                             </Card>
                         </Col>

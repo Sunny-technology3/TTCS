@@ -1,6 +1,8 @@
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
+
 import threading
-from realtime.realtime_runner import run_realtime
+from realtime.realtime_runner import generate_realtime_frames
 from core.runtime_state import running_flags
 
 router = APIRouter()
@@ -10,14 +12,7 @@ def start_realtime(data: dict):
     class_id = data["classId"]
     running_flags[class_id] = True
 
-    thread = threading.Thread(
-        target=run_realtime,
-        args=(class_id, data["cameraUrl"],),
-        daemon=True
-    )
-    thread.start()
-
-    return {"message": "started"}
+    return {"message": "Đã bắt đầu realtime"}
 
 
 @router.post("/stop")
@@ -26,4 +21,18 @@ def stop_realtime(data: dict):
 
     running_flags[class_id] = False
     
-    return {"message": "stopped"}
+    return {"message": "Đã dừng realtime"}
+
+@router.get("/video-feed/{class_id}")
+def video_feed(class_id: str, sessionId: str, cameraUrl: str, token: str):
+    running_flags[class_id] = True
+
+    return StreamingResponse(
+        generate_realtime_frames(
+            class_id,
+            sessionId,
+            cameraUrl,
+            token
+        ),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )

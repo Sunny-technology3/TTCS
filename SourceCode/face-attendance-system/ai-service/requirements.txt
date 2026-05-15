@@ -5,3 +5,4 @@ onnxruntime
 numpy
 python-multipart
 requests
+flask

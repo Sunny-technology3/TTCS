@@ -56,7 +56,7 @@ def extract_embedding(image_bytes):
         faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
         if len(faces) == 0:
-            raise Exception("No face detected")
+            raise Exception("Không phát hiện khuôn mặt")
 
         x, y, w, h = faces[0]
 
@@ -81,7 +81,7 @@ def extract_embedding(image_bytes):
         embeddings.append(embedding)
 
     if len(embeddings) == 0:
-        raise Exception("No valid face embedding")
+        raise Exception("Không tìm thấy đặc trưng khuôn mặt hợp lệ")
 
     final_embedding = np.mean(embeddings, axis=0)
 

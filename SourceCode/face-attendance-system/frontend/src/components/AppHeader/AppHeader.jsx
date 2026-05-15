@@ -93,7 +93,7 @@ function AppHeader() {
       <Header
         style={{
           background: '#fff',
-          padding: '0 16px',
+          padding: '6px 16px',
           borderBottom: '1px solid #eee',
           height: 'auto',
           lineHeight: 'normal',

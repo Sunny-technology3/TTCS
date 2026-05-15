@@ -8,18 +8,17 @@ const {
     exportAttendanceBySession,
     exportAttendanceByClass,
 } = require("../controllers/attendanceController");
-const { verifyToken } = require("../middleware/verifyToken");
 
-router.post("/auto-checkin", autoCheckIn);
+router.post("/auto-check-in", autoCheckIn);
 
-router.get("/session", verifyToken, getAttendanceBySession);
+router.get("/session", getAttendanceBySession);
 
-router.post("/mark-all", verifyToken, markAllPresent);
+router.post("/mark-all", markAllPresent);
 
-router.post("/:sessionId/:studentId", verifyToken, updateAttendanceStatus);
+router.post("/:sessionId/:studentId", updateAttendanceStatus);
 
-router.get("/export/session/:sessionId", verifyToken, exportAttendanceBySession);
+router.get("/export/session/:sessionId", exportAttendanceBySession);
 
-router.get("/export/class/:classId", verifyToken, exportAttendanceByClass);
+router.get("/export/class/:classId", exportAttendanceByClass);
 
 module.exports = router;

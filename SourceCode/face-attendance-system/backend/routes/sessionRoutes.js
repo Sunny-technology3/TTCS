@@ -5,33 +5,27 @@ const {
     createSession, updateSession, updateSessionStatus, deleteSession,
     importSessions, downloadSessionTemplate,
 } = require("../controllers/sessionController");
-const { verifyToken } = require("../middleware/verifyToken");
 const multer = require("multer");
 const upload = multer({
     storage: multer.memoryStorage(),
 });
 
-router.get("/:sessionId", verifyToken, getDetailSession);
+router.get("/:sessionId", getDetailSession);
 
-router.post("/", verifyToken, createSession);
+router.post("/", createSession);
 
-router.put("/:sessionId", verifyToken, updateSession);
+router.put("/:sessionId", updateSession);
 
-router.put("/:sessionId/status", verifyToken, updateSessionStatus);
+router.put("/:sessionId/status", updateSessionStatus);
 
-router.delete("/:sessionId", verifyToken, deleteSession);
+router.delete("/:sessionId", deleteSession);
 
 router.post(
     "/import",
-    verifyToken,
     upload.single("file"),
     importSessions
 );
 
-router.get(
-    "/template/download",
-    verifyToken,
-    downloadSessionTemplate
-);
+router.get("/template/download", downloadSessionTemplate);
 
 module.exports = router;
