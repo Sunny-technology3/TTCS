@@ -376,13 +376,13 @@ function SessionDetail() {
                     justify="space-between"
                     style={{ marginTop: 10 }}
                 >
-                    <Col xs={24} md={12}>
+                    <Col xs={24} md={8}>
                         <Title level={3} style={{ margin: 0 }}>
                             {sessionData?.name ? sessionData.name : "Đang tải..."} - Điểm danh
                         </Title>
                     </Col>
 
-                    <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+                    <Col xs={24} md={16} style={{ textAlign: 'right' }}>
                         <Space wrap>
                             <Button
                                 icon={<EditOutlined />}

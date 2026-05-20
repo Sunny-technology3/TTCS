@@ -12,6 +12,18 @@ const studentApi = {
     deleteStudent: (studentId) => {
         return axiosClient.delete(`/students/${studentId}`);
     },
+
+    importStudents: (data) => {
+        return axiosClient.post(
+            "/students/import",
+            data,
+            {
+                headers: {
+                    "Content-Type": "multipart/form-data"
+                }
+            }
+        );
+    },
 };
 
 export default studentApi;

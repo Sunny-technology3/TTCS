@@ -2,6 +2,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const {
     getEmbeddingService,
     createStudentService, updateStudentService, deleteStudentService,
+    importStudentsService,
 } = require("../services/student/studentService");
 
 const getEmbeddings = asyncHandler(async (req, res) => {
@@ -61,9 +62,31 @@ const deleteStudent = asyncHandler(async (req, res) => {
     });
 });
 
+const importStudents = asyncHandler(async (req, res) => {
+    const { classId } = req.body;
+    const { id } = req.user;
+
+    const excelFile = req.files?.excel?.[0];
+    const zipFile = req.files?.images?.[0];
+
+    const result = await importStudentsService({
+        classId,
+        lecturerId: id,
+        excelFile,
+        zipFile,
+    });
+
+    return res.status(201).json({
+        success: true,
+        message: "Import sinh viên thành công",
+        data: result,
+    });
+});
+
 module.exports = {
     getEmbeddings,
     createStudent,
     updateStudent,
     deleteStudent,
+    importStudents,
 };

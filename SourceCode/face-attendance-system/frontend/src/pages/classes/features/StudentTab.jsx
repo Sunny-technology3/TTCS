@@ -32,10 +32,13 @@ function StudentTab({ students, classId, onStudentChange }) {
     const [editing, setEditing] = useState(null);
     const [data, setData] = useState(students);
     const [form] = Form.useForm();
+    const [importForm] = Form.useForm();
     const [loadingSubmit, setLoadingSubmit] = useState(false);
     const [searchType, setSearchType] = useState("studentId");
     const [searchText, setSearchText] = useState("");
     const [updateAvatar, setUpdateAvatar] = useState(false);
+    const [openImport, setOpenImport] = useState(false);
+    const [importLoading, setImportLoading] = useState(false);
 
     const openAdd = () => {
         setEditing(null);
@@ -124,6 +127,86 @@ function StudentTab({ students, classId, onStudentChange }) {
         } catch (error) {
             console.log(error);
             message.error(error?.response?.data?.message || "Xóa thất bại");
+        }
+    };
+
+    const handleImportStudents = async (values) => {
+        setImportLoading(true);
+
+        try {
+            const formData = new FormData();
+
+            formData.append("classId", classId);
+
+            const excel =
+                values.excelFile?.fileList?.[0]?.originFileObj;
+
+            formData.append("excel", excel);
+
+            const images =
+                values.imageFolder?.fileList || [];
+
+            images.forEach((file) => {
+                formData.append(
+                    "images",
+                    file.originFileObj
+                );
+            });
+
+            const res =
+                await studentApi.importStudents(formData);
+
+            const result = res.data.data;
+
+            setData((prev) => [
+                ...prev,
+                ...result.students,
+            ]);
+
+            onStudentChange?.((prev) => [
+                ...prev,
+                ...result.students,
+            ]);
+
+            message.success(
+                `Import thành công ${result.successCount}/${result.total} sinh viên`
+            );
+
+            if (result.failedCount > 0) {
+                Modal.warning({
+                    title: "Một số sinh viên import thất bại",
+                    width: 700,
+                    content: (
+                        <div
+                            style={{
+                                maxHeight: 400,
+                                overflow: "auto",
+                                marginTop: 16,
+                            }}
+                        >
+                            {result.failedStudents.map((item, index) => (
+                                <div key={index}>
+                                    <b>{item.studentId}</b>
+                                    {" - "}
+                                    {item.reason}
+                                </div>
+                            ))}
+                        </div>
+                    ),
+                });
+            }
+
+            setOpenImport(false);
+
+            importForm.resetFields();
+        } catch (error) {
+            console.log(error);
+            message.error(
+                error?.response?.data?.message ||
+                "Import thất bại"
+            );
+        } finally {
+            setImportLoading(false);
         }
     };
 
@@ -255,6 +338,13 @@ function StudentTab({ students, classId, onStudentChange }) {
                 >
                     Thêm sinh viên
                 </Button>
+
+                <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => setOpenImport(true)}
+                >
+                    Import Excel
+                </Button>
             </Space>
 
             <Table
@@ -374,6 +464,94 @@ function StudentTab({ students, classId, onStudentChange }) {
                             )}
                         </>
                     )}
+                </Form>
+            </Modal>
+
+            <Modal
+                open={openImport}
+                title="Import sinh viên"
+                onCancel={() => setOpenImport(false)}
+                onOk={() => importForm.submit()}
+                confirmLoading={importLoading}
+            >
+                <Form
+                    form={importForm}
+                    layout="vertical"
+                    onFinish={handleImportStudents}
+                >
+                    <Form.Item
+                        name="excelFile"
+                        label="File Excel"
+                        extra={
+                            <Text type="secondary">
+                                File Excel cần chứa cột:
+                                <b> "Mã sinh viên" </b>
+                                và
+                                <b> "Họ và tên"</b>.
+                            </Text>
+                        }
+                        rules={[
+                            {
+                                required: true,
+                                message: "Vui lòng chọn file Excel"
+                            }
+                        ]}
+                    >
+                        <Upload
+                            beforeUpload={() => false}
+                            maxCount={1}
+                            accept=".xlsx,.xls"
+                        >
+                            <Button icon={<UploadOutlined />}>
+                                Upload Excel
+                            </Button>
+                        </Upload>
+                    </Form.Item>
+
+                    <Form.Item
+                        name="imageFolder"
+                        label="Folder ảnh sinh viên"
+                        extra={
+                            <div
+                                style={{
+                                    padding: 10,
+                                    borderRadius: 8,
+                                    background: "#fafafa",
+                                    border: "1px solid #d9d9d9",
+                                    lineHeight: 1.7,
+                                    marginTop: "10px",
+                                }}
+                            >
+                                <Text type="secondary">
+                                    • Upload file <b>.zip</b>
+                                    <br />
+                                    • Tên ảnh phải trùng mã sinh viên
+                                    <br />
+                                    • Ví dụ:
+                                    <br />
+                                    B23DCCN001.jpg
+                                    <br />
+                                    B23DCCN002.png
+                                </Text>
+                            </div>
+                        }
+                        rules={[
+                            {
+                                required: true,
+                                message: "Vui lòng chọn folder ảnh"
+                            }
+                        ]}
+                    >
+                        <Upload
+                            beforeUpload={() => false}
+                            maxCount={1}
+                            accept=".zip"
+                        >
+                            <Button icon={<UploadOutlined />}>
+                                Chọn folder ảnh
+                            </Button>
+                        </Upload>
+                    </Form.Item>
                 </Form>
             </Modal>
         </div>

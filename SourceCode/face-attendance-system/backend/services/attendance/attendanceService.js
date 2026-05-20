@@ -14,13 +14,13 @@ const DEFAULT_START_ROW = 5;
 
 const formatCheckIn = (value) => {
     if (!value) {
-        return "";
+        return "---";
     }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-        return "";
+        return "---";
     }
 
     const pad = (number) => String(number).padStart(2, "0");

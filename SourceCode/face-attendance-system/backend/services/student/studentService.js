@@ -1,4 +1,7 @@
 const axios = require("axios");
+const XLSX = require("xlsx");
+const AdmZip = require("adm-zip");
+const path = require("path");
 const FormData = require("form-data");
 const Student = require("../../models/student");
 const Class = require("../../models/class");
@@ -182,9 +185,207 @@ const deleteStudentService = async ({ studentId, lecturerId }) => {
     });
 };
 
+const importStudentsService = async ({
+    classId,
+    lecturerId,
+    excelFile,
+    zipFile,
+}) => {
+    if (!excelFile || !zipFile) {
+        throw new AppError(400, "Thiếu file excel hoặc file ảnh");
+    }
+
+    const classData = await Class.findById(classId);
+    if (!classData) {
+        throw new AppError(404, "Không tìm thấy lớp học");
+    }
+
+    if (
+        classData.lecturerId.toString()
+        !== lecturerId.toString()
+    ) {
+        throw new AppError(403, "Bạn không có quyền");
+    }
+
+    // Đọc excel
+    const workbook = XLSX.read(
+        excelFile.buffer,
+        { type: "buffer" }
+    );
+
+    const sheetName = workbook.SheetNames[0];
+
+    const rows = XLSX.utils.sheet_to_json(
+        workbook.Sheets[sheetName],
+        {
+            range: 3,
+            raw: false,
+        }
+    );
+
+    // Đọc zip
+    const zip = new AdmZip(zipFile.buffer);
+
+    const zipEntries = zip.getEntries();
+
+    const imageMap = {};
+
+    for (const entry of zipEntries) {
+        if (entry.isDirectory) {
+            continue;
+        }
+
+        const fileName = path.basename(
+            entry.entryName
+        );
+
+        const ext = path.extname(fileName);
+
+        const studentId = path.basename(
+            fileName,
+            ext
+        );
+
+        imageMap[studentId] = {
+            buffer: entry.getData(),
+            originalname: fileName,
+        };
+    }
+
+    const createdStudents = [];
+    const failedStudents = [];
+
+    const safeClassName = classData.name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "_")
+        .replace(/[^a-zA-Z0-9_]/g, "");
+
+    for (const row of rows) {
+        try {
+            const studentId = row["Mã sinh viên"];
+            const fullName = row["Họ và tên"];
+
+            if (!studentId || !fullName) {
+                failedStudents.push({
+                    studentId,
+                    fullName,
+                    reason: "Thiếu dữ liệu",
+                });
+
+                continue;
+            }
+
+            const existed = await Student.findOne({
+                studentId,
+                classId,
+            });
+            if (existed) {
+                failedStudents.push({
+                    studentId,
+                    fullName,
+                    reason: "Sinh viên đã tồn tại",
+                });
+
+                continue;
+            }
+
+            const imageFile = imageMap[studentId];
+
+            if (!imageFile) {
+                failedStudents.push({
+                    studentId,
+                    fullName,
+                    reason: "Không tìm thấy ảnh",
+                });
+
+                continue;
+            }
+
+            // Lưu trữ lên R2
+            const folder = `students/${safeClassName}/${studentId}`;
+
+            const fileName = `avatar_${studentId}`;
+
+            const { url } = await uploadToR2(
+                imageFile,
+                folder,
+                fileName
+            );
+
+            await runInTransaction(async (session) => {
+                // Tạo sinh viên
+                const student = await Student.create(
+                    [
+                        {
+                            studentId,
+                            fullName,
+                            classId,
+                            avatarUrl: url,
+                        }
+                    ],
+                    { session }
+                );
+
+                // Gọi AI tạo embedding
+                const formData = new FormData();
+
+                formData.append(
+                    "file",
+                    imageFile.buffer,
+                    imageFile.originalname
+                );
+
+                const aiRes = await axios.post(
+                    "http://localhost:8000/api/face/register",
+                    formData,
+                    {
+                        headers: formData.getHeaders(),
+                    }
+                );
+
+                if (!aiRes.data.success) {
+                    throw new Error(
+                        "Không tạo được embedding"
+                    );
+                }
+
+                // Lưu embedding
+                await FaceEmbedding.create(
+                    [
+                        {
+                            studentId: student[0]._id,
+                            embedding:
+                                aiRes.data.data.embedding,
+                        }
+                    ],
+                    { session }
+                );
+
+                createdStudents.push(student[0]);
+            });
+        } catch (error) {
+            failedStudents.push({
+                studentId: row.studentId,
+                fullName: row.fullName,
+                reason: error.message,
+            });
+        }
+    }
+
+    return {
+        successCount: createdStudents.length,
+        failedCount: failedStudents.length,
+        total: rows.length,
+        students: createdStudents,
+        failedStudents,
+    };
+};
+
 module.exports = {
     getEmbeddingService,
     createStudentService,
     updateStudentService,
     deleteStudentService,
+    importStudentsService,
 };

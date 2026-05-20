@@ -304,7 +304,14 @@ function SessionTab({ sessions, classId, onSessionChange }) {
 
     return (
         <div>
-            <Space>
+            <Space
+                style={{
+                    width: "100%",
+                    justifyContent: "flex-end",
+                    marginTop: 16,
+                }}
+                wrap
+            >
                 <Button
                     type="primary"
                     icon={<PlusOutlined />}

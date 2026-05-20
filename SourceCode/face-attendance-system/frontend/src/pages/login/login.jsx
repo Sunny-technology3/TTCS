@@ -88,7 +88,7 @@ function Login() {
                 justifyContent: 'center',
                 alignItems: 'flex-start',
                 overflowY: 'auto',
-                padding: '24px 16px',
+                padding: '100px 16px',
             }}
         >
             <Card
