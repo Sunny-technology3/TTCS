@@ -1,5 +1,6 @@
 # Face Attendance System
-Hệ thống điểm danh sinh viên sử dụng nhận diện khuôn mặt theo thời gian thực (Realtime Face Recognition)
+
+Hệ thống điểm danh sinh viên sử dụng công nghệ nhận diện khuôn mặt thời gian thực (Realtime Face Recognition) nhằm hỗ trợ tự động hóa quá trình điểm danh trong lớp học.
 
 ---
 
@@ -9,6 +10,16 @@ Hệ thống điểm danh sinh viên sử dụng nhận diện khuôn mặt theo
 * Backend: Node.js + Express + MongoDB
 * AI Service: Python + FastAPI + ONNX (ArcFace)
 * Cloud Storage: Cloudflare R2
+
+---
+
+## Kiến trúc hệ thống
+
+Hệ thống được chia thành 3 thành phần chính:
+
+- Frontend: Giao diện quản lý và realtime monitoring
+- Backend: Xử lý API, xác thực và quản lý dữ liệu
+- AI Service: Xử lý nhận diện khuôn mặt và realtime face recognition
 
 ---
 
@@ -55,9 +66,9 @@ Chỉ cần chạy project là sử dụng được ngay.
 
 Hệ thống sử dụng Cloudflare R2 để lưu trữ file.
 
-Project đã được cấu hình sẵn Cloudflare R2 nên không cần cài đặt hoặc cấu hình thêm.
+Hệ thống sử dụng Cloudflare R2 để lưu trữ ảnh sinh viên và dữ liệu upload.
 
-Chỉ cần chạy project là có thể upload và truy cập file thông qua public URL.
+Các file sau khi upload sẽ được truy cập thông qua public URL.
 
 ---
 
@@ -112,12 +123,14 @@ https://github.com/deepinsight/insightface/releases
 
 ---
 
-#### 2. Haar Cascade (Face Detection)
+#### 2. YuNet (Face Detection)
+
+Model sử dụng để phát hiện khuôn mặt realtime.
 
 * Truy cập:
-https://github.com/opencv/opencv/blob/master/data/haarcascades
+https://github.com/opencv/opencv_zoo/blob/main/models/face_detection_yunet
 
-* Tải file: `haarcascade_frontalface_default.xml`
+* Tải file: `face_detection_yunet_2023mar.onnx`
 
 ---
 
@@ -138,7 +151,7 @@ ai-service/
 │
 ├── models/
 │ ├── arcface.onnx
-│ ├── haarcascade_frontalface_default.xml
+│ ├── face_detection_yunet_2023mar.onnx
 │ └── lbfmodel.yaml
 ```
 
@@ -216,6 +229,28 @@ uvicorn main:app --reload --port 8000
 
 ---
 
+## Chức năng chính
+
+### Giảng viên
+
+- Đăng nhập hệ thống
+- Quản lý lớp học
+- Quản lý sinh viên
+- Import danh sách sinh viên từ Excel
+- Upload ảnh sinh viên
+- Tạo phiên học
+- Điểm danh realtime bằng camera
+- Xuất file Excel điểm danh
+
+### AI Realtime
+
+- Phát hiện khuôn mặt realtime
+- Sinh embedding bằng ArcFace
+- So khớp cosine similarity
+- Tự động check-in sinh viên
+
+---
+
 ## Quy trình sử dụng
 
 1. Tạo lớp học
@@ -224,6 +259,17 @@ uvicorn main:app --reload --port 8000
 4. Tạo phiên học (session)
 5. Nhấn **Bắt đầu** => hệ thống chạy AI realtime
 6. Nhấn **Kết thúc** để dừng
+
+---
+
+## Quy trình nhận diện khuôn mặt
+
+1. Camera gửi frame realtime
+2. YuNet phát hiện khuôn mặt
+3. Face Alignment chuẩn hóa khuôn mặt
+4. ArcFace sinh vector embedding 512 chiều
+5. So sánh cosine similarity với dữ liệu đã lưu
+6. Nếu độ tương đồng vượt ngưỡng -> tự động điểm danh
 
 ---
 
@@ -252,13 +298,13 @@ Lưu ý: Đây là tài khoản phục vụ mục đích demo và kiểm thử h
 
 ## API chính
 
-### Backend
+### Backend API
 
-* `GET /api/students/embeddings?classId=...`
+* `GET /api/students/embeddings`
 * `POST /api/attendances/auto-checkin`
 * `PUT /api/sessions/:sessionId/status`
 
-### AI Service
+### AI Service API
 
 * `POST /api/face/register`
 * `POST /api/attendance/start`
