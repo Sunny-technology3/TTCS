@@ -63,7 +63,7 @@ function StudentTab({ students, classId, onStudentChange }) {
 
     const handleSubmit = async (values) => {
         setLoadingSubmit(true);
-
+        console.log(values)
         try {
             const formData = new FormData();
 
@@ -71,7 +71,7 @@ function StudentTab({ students, classId, onStudentChange }) {
             formData.append("studentId", values.studentId);
             formData.append("classId", classId);
 
-            const file = values.avatar?.fileList?.[0]?.originFileObj;
+            const file = values.avatar?.[0]?.originFileObj;
 
             if (file) {
                 formData.append("file", file);
@@ -362,7 +362,7 @@ function StudentTab({ students, classId, onStudentChange }) {
 
             <Modal
                 open={open}
-                title={editing ? 'Sửa sinh viên' : 'Thêm sinh viên'}
+                title={editing ? "Sửa sinh viên" : "Thêm sinh viên"}
                 okText={editing ? "Cập nhật" : "Thêm sinh viên"}
                 cancelText={"Hủy"}
                 onCancel={() => setOpen(false)}
@@ -377,7 +377,7 @@ function StudentTab({ students, classId, onStudentChange }) {
                     <Form.Item
                         name="studentId"
                         label="Mã sinh viên"
-                        rules={[{ required: true, message: 'Vui lòng nhập mã sinh viên' }]}
+                        rules={[{ required: true, message: "Vui lòng nhập mã sinh viên" }]}
                     >
                         <Input placeholder="Nhập mã sinh viên" />
                     </Form.Item>
@@ -385,7 +385,7 @@ function StudentTab({ students, classId, onStudentChange }) {
                     <Form.Item
                         name="fullName"
                         label="Họ và tên"
-                        rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
+                        rules={[{ required: true, message: "Vui lòng nhập họ và tên" }]}
                     >
                         <Input placeholder="Nhập họ và tên sinh viên" />
                     </Form.Item>
@@ -396,7 +396,20 @@ function StudentTab({ students, classId, onStudentChange }) {
                             label="Ảnh khuôn mặt"
                             valuePropName="fileList"
                             getValueFromEvent={(e) => e?.fileList}
-                            rules={[{ required: true, message: 'Vui lòng upload ảnh khuôn mặt' }]}
+                            rules={[{ required: true, message: "Vui lòng upload ảnh khuôn mặt" }]}
+                            extra={
+                                <Text
+                                    type="secondary"
+                                    style={{
+                                        fontSize: 12,
+                                        lineHeight: 1.6,
+                                    }}
+                                >
+                                    Vui lòng sử dụng ảnh chân dung chính diện
+                                    (từ cổ trở lên), rõ nét, đủ sáng
+                                    và không có nhiều người trong ảnh.
+                                </Text>
+                            }
                         >
                             <Upload
                                 beforeUpload={() => false}
@@ -407,19 +420,6 @@ function StudentTab({ students, classId, onStudentChange }) {
                                     Chọn ảnh
                                 </Button>
                             </Upload>
-
-                            <Text
-                                type="secondary"
-                                style={{
-                                    display: "block",
-                                    marginTop: 8,
-                                    fontSize: 12,
-                                    lineHeight: 1.5,
-                                }}
-                            >
-                                Vui lòng sử dụng ảnh chân dung chính diện (từ cổ trở lên),
-                                rõ nét, đủ sáng và không có nhiều người trong ảnh.
-                            </Text>
                         </Form.Item>
                     )}
 
@@ -441,25 +441,26 @@ function StudentTab({ students, classId, onStudentChange }) {
                                     name="avatar"
                                     valuePropName="fileList"
                                     getValueFromEvent={(e) => e?.fileList}
+                                    rules={[{ required: true, message: "Vui lòng upload ảnh khuôn mặt" }]}
+                                    extra={
+                                        <Text
+                                            type="secondary"
+                                            style={{
+                                                fontSize: 12,
+                                                lineHeight: 1.6,
+                                            }}
+                                        >
+                                            Vui lòng sử dụng ảnh chân dung chính diện
+                                            (từ cổ trở lên), rõ nét, đủ sáng
+                                            và không có nhiều người trong ảnh.
+                                        </Text>
+                                    }
                                 >
                                     <Upload beforeUpload={() => false} maxCount={1}>
                                         <Button icon={<UploadOutlined />}>
                                             Upload ảnh mới
                                         </Button>
                                     </Upload>
-
-                                    <Text
-                                        type="secondary"
-                                        style={{
-                                            display: "block",
-                                            marginTop: 8,
-                                            fontSize: 12,
-                                            lineHeight: 1.5,
-                                        }}
-                                    >
-                                        Vui lòng sử dụng ảnh chân dung chính diện (từ cổ trở lên),
-                                        rõ nét, đủ sáng và không có nhiều người trong ảnh.
-                                    </Text>
                                 </Form.Item>
                             )}
                         </>
