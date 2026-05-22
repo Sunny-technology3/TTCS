@@ -2,11 +2,18 @@ import cv2
 import requests
 import time
 import numpy as np
+
 from services.recognition_service import cosine_similarity
 from core.face_embedding import get_embedding
 from core.runtime_state import running_flags
 
 THRESHOLD = 0.45
+
+face_detector = cv2.FaceDetectorYN.create(
+    "models/face_detection_yunet_2023mar.onnx",
+    "",
+    (320, 320)
+)
 
 def get_checked_students(class_id, session_id, token):
     try:
@@ -51,6 +58,7 @@ def generate_realtime_frames(class_id, session_id, camera_url, token):
         return
 
     last_check_in = {}
+
     checked_students, student_map = get_checked_students(
         class_id,
         session_id,
@@ -79,39 +87,100 @@ def generate_realtime_frames(class_id, session_id, camera_url, token):
 
     try:
         while running_flags.get(class_id, True):
-
             ret, frame = cap.read()
 
             if not ret:
                 continue
 
+            h, w = frame.shape[:2]
+
+            # update size cho YuNet
+            face_detector.setInputSize((w, h))
+
             best_match = None
             best_score = -1
 
-            try:
-                emb = get_embedding(frame)
+            # detect face
+            _, faces = face_detector.detect(frame)
 
-            except Exception as e:
-                print("Lỗi khi tạo embedding:", e)
-                continue
+            if faces is not None:
 
-            if emb is not None:
-                for item in embeddings:
-                    mongo_student_id = item["studentId"]
+                for face in faces:
+                    # Crop khuôn mặt
+                    x, y, fw, fh = face[:4].astype(int)
 
-                    if mongo_student_id in checked_students:
+                    face_crop = frame[y:y+fh, x:x+fw]
+
+                    try:
+                        emb = get_embedding(face_crop)
+
+                    except Exception as e:
+                        print("Lỗi khi tạo embedding:", e)
                         continue
 
-                    db_emb = np.array(item["embedding"])
+                    if emb is None:
+                        continue
 
-                    sim = cosine_similarity(emb, db_emb)
+                    current_best_match = None
+                    current_best_score = -1
 
-                    if sim > best_score:
-                        best_score = sim
-                        best_match = mongo_student_id
+                    for item in embeddings:
+                        mongo_student_id = item["studentId"]
+
+                        db_emb = np.array(item["embedding"])
+
+                        sim = cosine_similarity(emb, db_emb)
+
+                        if sim > current_best_score:
+                            current_best_score = sim
+                            current_best_match = mongo_student_id
+
+                    is_match = current_best_score > THRESHOLD
+
+                    color = (
+                        (0, 255, 0)
+                        if is_match
+                        else (0, 0, 255)
+                    )
+
+                    display_student = (
+                        student_map.get(current_best_match)
+                        if current_best_match
+                        else "Unknown"
+                    )
+
+                    # Vẽ khung mặt
+                    cv2.rectangle(
+                        frame,
+                        (x, y),
+                        (x + fw, y + fh),
+                        color,
+                        2
+                    )
+
+                    label = (
+                        f"{display_student} - CHECKED"
+                        if current_best_match in checked_students
+                        else f"{display_student} ({current_best_score:.2f})"
+                    )
+                    # Label phía trên mặt
+                    cv2.putText(
+                        frame,
+                        label,
+                        (x, y - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        color,
+                        2
+                    )
+
+                    # Lưu best global
+                    if current_best_score > best_score:
+                        best_score = current_best_score
+                        best_match = current_best_match
 
             # Tự động check-in
-            if best_score > THRESHOLD and best_match:
+            if best_score > THRESHOLD and best_match and best_match not in checked_students:
                 now = time.time()
 
                 # Chặn spam check-in

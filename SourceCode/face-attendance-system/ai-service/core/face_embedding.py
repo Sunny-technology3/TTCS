@@ -8,8 +8,11 @@ session = ort.InferenceSession("models/arcface.onnx")
 input_name = session.get_inputs()[0].name
 
 # ===== FACE DETECTOR =====
-face_cascade = cv2.CascadeClassifier(
-    "models/haarcascade_frontalface_default.xml"
+face_detector = cv2.FaceDetectorYN.create(
+    "models/face_detection_yunet_2023mar.onnx",
+    "",
+    (320, 320),
+    score_threshold=0.7
 )
 
 # ===== LANDMARK =====
@@ -36,6 +39,18 @@ def preprocess(img):
     img = np.transpose(img, (2, 0, 1))
     return np.expand_dims(img, axis=0)
 
+def detect_face(image):
+    h, w = image.shape[:2]
+
+    face_detector.setInputSize((w, h))
+
+    _, faces = face_detector.detect(image)
+
+    if faces is None:
+        return None
+
+    return faces
+
 def extract_embedding(image_bytes):
     img_array = np.frombuffer(
         image_bytes,
@@ -52,13 +67,14 @@ def extract_embedding(image_bytes):
     embeddings = []
 
     for aug_img in augmented_images:
-        gray = cv2.cvtColor(aug_img, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+        faces = detect_face(aug_img)
 
-        if len(faces) == 0:
-            raise Exception("Không phát hiện khuôn mặt")
+        if faces is None:
+            raise Exception(
+                "Không phát hiện khuôn mặt"
+            )
 
-        x, y, w, h = faces[0]
+        x, y, w, h = faces[0][:4].astype(int)
 
         ok, landmarks = facemark.fit(aug_img, np.array([(x, y, w, h)]))
         if not ok:
@@ -95,13 +111,12 @@ def extract_embedding(image_bytes):
 def get_embedding(frame):
     img = frame.copy()
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    faces = detect_face(img)
 
     if len(faces) == 0:
         return None
 
-    x, y, w, h = faces[0]
+    x, y, w, h = faces[0][:4].astype(int)
 
     ok, landmarks = facemark.fit(img, np.array([(x, y, w, h)]))
     if not ok:
@@ -119,4 +134,8 @@ def get_embedding(frame):
     input_tensor = preprocess(aligned)
     embedding = session.run(None, {input_name: input_tensor})[0][0]
 
-    return embedding / np.linalg.norm(embedding)
+    embedding = (
+        embedding /
+        np.linalg.norm(embedding)
+    )
+    return embedding
