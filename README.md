@@ -64,8 +64,6 @@ Chỉ cần chạy project là sử dụng được ngay.
 
 ## Cloud Storage
 
-Hệ thống sử dụng Cloudflare R2 để lưu trữ file.
-
 Hệ thống sử dụng Cloudflare R2 để lưu trữ ảnh sinh viên và dữ liệu upload.
 
 Các file sau khi upload sẽ được truy cập thông qua public URL.
@@ -107,6 +105,8 @@ pip install -r requirements.txt
 Do giới hạn của GitHub, các file model KHÔNG được commit vào repo.
 
 Vui lòng tải các file sau và đặt vào thư mục: ai-service/models/
+
+---
 
 #### 1. ArcFace (Embedding model)
 
@@ -186,7 +186,7 @@ Sử dụng điện thoại làm camera:
 3. Lấy URL dạng:
 
 ```
-http://192.168.x.x:8080/video
+http://x.x.x.x:8080/video
 ```
 
 4. Lưu URL này vào hệ thống (cameraUrl của lớp học)

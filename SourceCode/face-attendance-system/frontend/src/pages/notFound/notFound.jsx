@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 
 const styles = {
     container: {
-        height: '100vh',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center'
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
     }
 };
 

@@ -87,14 +87,14 @@ function ClassDetail() {
                 queryKey: ["allClass"],
             });
 
-            message.success("Cập nhật lớp thành công");
+            message.success("Cập nhật lớp học thành công");
 
             setOpen(false);
         } catch (error) {
             console.log(error);
             message.error(
                 error?.response?.data?.message ||
-                "Cập nhật thất bại"
+                "Cập nhật lớp học thất bại"
             );
         }
     };

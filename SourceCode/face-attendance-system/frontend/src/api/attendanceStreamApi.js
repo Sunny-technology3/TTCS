@@ -4,6 +4,7 @@ const attendanceStreamApi = {
     getVideoFeedUrl: ({
         classId,
         sessionId,
+        endTime,
         cameraUrl
     }) => {
         const token = localStorage.getItem("token");
@@ -11,6 +12,7 @@ const attendanceStreamApi = {
         return (
             `${AI_BASE_URL}/attendance/video-feed/${classId}` +
             `?sessionId=${sessionId}` +
+            `&endTime=${encodeURIComponent(endTime)}` +
             `&cameraUrl=${encodeURIComponent(cameraUrl)}` +
             `&token=${encodeURIComponent(token || "")}`
         );

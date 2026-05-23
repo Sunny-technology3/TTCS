@@ -77,10 +77,10 @@ function ClassList() {
         queryKey: ["allClass"],
       });
 
-      message.success("Xóa lớp thành công");
+      message.success("Xóa lớp học thành công");
     } catch (error) {
       console.log(error);
-      message.error(error?.response?.data?.message || "Xóa lớp thất bại");
+      message.error(error?.response?.data?.message || "Xóa lớp học thất bại");
     }
   };
 

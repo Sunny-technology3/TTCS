@@ -132,7 +132,7 @@ function SessionTab({ sessions, classId, onSessionChange }) {
             message.success("Cập nhật trạng thái thành công");
         } catch (error) {
             console.log(error);
-            message.error(error?.response?.data?.message || "Có lỗi xảy ra");
+            message.error(error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật trạng thái phiên học");
         }
     };
 

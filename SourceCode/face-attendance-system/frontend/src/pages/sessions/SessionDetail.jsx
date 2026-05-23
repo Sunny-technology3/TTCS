@@ -96,10 +96,10 @@ function SessionDetail() {
                     )
             );
 
-            message.success("Cập nhật trạng thái thành công");
+            message.success("Cập nhật trạng thái điểm danh thành công");
         } catch (error) {
             console.log(error);
-            message.error(error?.response?.data?.message || "Có lỗi xảy ra");
+            message.error(error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật trạng thái điểm danh");
         }
     };
 
@@ -118,7 +118,7 @@ function SessionDetail() {
             message.success("Cập nhật trạng thái phiên học thành công");
         } catch (error) {
             console.log(error);
-            message.error(error?.response?.data?.message || "Có lỗi xảy ra");
+            message.error(error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật trạng thái phiên học");
         }
     };
 
@@ -138,7 +138,7 @@ function SessionDetail() {
             message.success("Điểm danh tất cả thành công");
         } catch (error) {
             console.log(error);
-            message.error(error?.response?.data?.message || "Có lỗi xảy ra");
+            message.error(error?.response?.data?.message || "Có lỗi xảy ra khi điểm danh tất cả");
         } finally {
             setMarkingAll(false);
         }
@@ -216,7 +216,7 @@ function SessionDetail() {
             console.log(error);
             message.error(
                 error?.response?.data?.message ||
-                "Có lỗi xảy ra"
+                "Có lỗi xảy ra khi cập nhật phiên học"
             );
         }
     };
@@ -245,10 +245,10 @@ function SessionDetail() {
 
     const columns = [
         {
-            title: 'Ảnh',
-            dataIndex: 'avatarUrl',
+            title: "Ảnh",
+            dataIndex: "avatarUrl",
             width: 80,
-            align: 'center',
+            align: "center",
             render: (value, record) => (
                 <Avatar
                     src={value}
@@ -257,17 +257,17 @@ function SessionDetail() {
                 />
             )
         },
-        { title: 'Mã sinh viên', dataIndex: 'studentId' },
-        { title: 'Họ và tên', dataIndex: 'fullName' },
+        { title: "Mã sinh viên", dataIndex: "studentId" },
+        { title: "Họ và tên", dataIndex: "fullName" },
         {
-            title: 'Thời gian vào học',
-            dataIndex: 'checkIn',
+            title: "Thời gian vào học",
+            dataIndex: "checkIn",
             render: (value) =>
                 value ? dayjs(value).format('DD/MM/YYYY HH:mm') : "---"
         },
         {
-            title: 'Điểm danh',
-            dataIndex: 'status',
+            title: "Điểm danh",
+            dataIndex: "status",
             render: (value) => {
                 const status = ATTENDANCE_STATUS_MAP[value];
 
@@ -279,9 +279,9 @@ function SessionDetail() {
             }
         },
         {
-            title: 'Thao tác',
+            title: "Thao tác",
             width: 160,
-            fixed: 'right',
+            fixed: "right",
             render: (_, record) => (
                 <Select
                     value={record.status}
@@ -338,7 +338,7 @@ function SessionDetail() {
                     {
                         title: (
                             <span
-                                style={{ cursor: 'pointer', color: '#1677ff' }}
+                                style={{ cursor: "pointer", color: "#1677ff" }}
                                 onClick={() => navigate('/classes')}
                             >
                                 Danh sách lớp học
@@ -348,7 +348,7 @@ function SessionDetail() {
                     {
                         title: (
                             <span
-                                style={{ cursor: 'pointer', color: '#1677ff' }}
+                                style={{ cursor: "pointer", color: "#1677ff" }}
                                 onClick={() => navigate(`/classes/${classData?._id}`)}
                             >
                                 {classData?.name || "Đang tải..."}
@@ -382,7 +382,7 @@ function SessionDetail() {
                         </Title>
                     </Col>
 
-                    <Col xs={24} md={16} style={{ textAlign: 'right' }}>
+                    <Col xs={24} md={16} style={{ textAlign: "right" }}>
                         <Space wrap>
                             <Button
                                 icon={<EditOutlined />}

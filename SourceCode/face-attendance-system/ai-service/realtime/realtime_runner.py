@@ -2,6 +2,7 @@ import cv2
 import requests
 import time
 import numpy as np
+from datetime import datetime, timezone
 
 from services.recognition_service import cosine_similarity
 from core.face_embedding import get_embedding
@@ -49,7 +50,7 @@ def get_checked_students(class_id, session_id, token):
 
         return set(), {}
     
-def generate_realtime_frames(class_id, session_id, camera_url, token):
+def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
     # Mở camera
     cap = cv2.VideoCapture(camera_url)
 
@@ -85,8 +86,35 @@ def generate_realtime_frames(class_id, session_id, camera_url, token):
 
     print("Tổng số sinh viên:", total_students)
 
+    end_dt = datetime.fromisoformat(
+        end_time.replace("Z", "+00:00")
+    )
+
     try:
         while running_flags.get(class_id, True):
+            # Auto stop khi hết giờ
+            now = datetime.now(timezone.utc)
+
+            if now >= end_dt:
+                print("Phiên học đã hết thời gian")
+
+                try:
+                    requests.put(
+                        f"http://localhost:8080/api/sessions/{session_id}/status",
+                        json={
+                            "status": "finished"
+                        },
+                        headers={
+                            "Authorization": f"Bearer {token}"
+                        },
+                        timeout=5
+                    )
+                except Exception as e:
+                    print("Lỗi auto finish:", e)
+
+                running_flags[class_id] = False
+                break
+
             ret, frame = cap.read()
 
             if not ret:
@@ -104,10 +132,23 @@ def generate_realtime_frames(class_id, session_id, camera_url, token):
             _, faces = face_detector.detect(frame)
 
             if faces is not None:
-
                 for face in faces:
                     # Crop khuôn mặt
                     x, y, fw, fh = face[:4].astype(int)
+
+                    confidence = face[-1]
+
+                    if confidence < 0.8:
+                        continue
+
+                    if fw < 60 or fh < 60:
+                        continue
+
+                    x = max(0, x)
+                    y = max(0, y)
+
+                    fw = min(fw, w - x)
+                    fh = min(fh, h - y)
 
                     face_crop = frame[y:y+fh, x:x+fw]
 

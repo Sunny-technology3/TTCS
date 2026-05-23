@@ -123,7 +123,7 @@ function SessionCameraPage() {
             console.log(error);
             message.error(
                 error?.response?.data?.message ||
-                "Có lỗi xảy ra"
+                "Có lỗi xảy ra khi cập nhật trạng thái phiên học"
             );
         }
     };
@@ -323,12 +323,14 @@ function SessionCameraPage() {
                                     }}
                                 >
                                     {
+                                        sessionData?.status === "in_progress" &&
                                         classData?.cameraUrl && (
                                             <img
                                                 src={
                                                     attendanceStreamApi.getVideoFeedUrl({
                                                         classId,
                                                         sessionId,
+                                                        endTime: sessionData.endTime,
                                                         cameraUrl: classData.cameraUrl
                                                     })
                                                 }
@@ -341,6 +343,10 @@ function SessionCameraPage() {
                                             />
                                         )
                                     }
+
+                                    {sessionData?.status === "finished" && (
+                                        <Empty description="Phiên học đã kết thúc" />
+                                    )}
                                 </div>
                             </Card>
                         </Col>
