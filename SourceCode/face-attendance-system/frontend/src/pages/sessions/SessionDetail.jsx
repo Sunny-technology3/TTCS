@@ -98,7 +98,6 @@ function SessionDetail() {
 
             message.success("Cập nhật trạng thái điểm danh thành công");
         } catch (error) {
-            console.log(error);
             message.error(error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật trạng thái điểm danh");
         }
     };
@@ -117,7 +116,6 @@ function SessionDetail() {
 
             message.success("Cập nhật trạng thái phiên học thành công");
         } catch (error) {
-            console.log(error);
             message.error(error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật trạng thái phiên học");
         }
     };
@@ -137,7 +135,6 @@ function SessionDetail() {
 
             message.success("Điểm danh tất cả thành công");
         } catch (error) {
-            console.log(error);
             message.error(error?.response?.data?.message || "Có lỗi xảy ra khi điểm danh tất cả");
         } finally {
             setMarkingAll(false);
@@ -185,7 +182,6 @@ function SessionDetail() {
 
             message.success("Xuất danh sách điểm danh thành công");
         } catch (error) {
-            console.log(error);
             message.error(error?.response?.data?.message || "Xuất danh sách điểm danh thất bại");
         } finally {
             setExporting(false);
@@ -213,7 +209,6 @@ function SessionDetail() {
 
             setOpenEdit(false);
         } catch (error) {
-            console.log(error);
             message.error(
                 error?.response?.data?.message ||
                 "Có lỗi xảy ra khi cập nhật phiên học"

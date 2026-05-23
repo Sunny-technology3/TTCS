@@ -98,7 +98,6 @@ function SessionTab({ sessions, classId, onSessionChange }) {
             form.resetFields();
             setEditing(null);
         } catch (error) {
-            console.log(error);
             message.error(error?.response?.data?.message || "Có lỗi xảy ra");
         }
     };
@@ -114,7 +113,6 @@ function SessionTab({ sessions, classId, onSessionChange }) {
 
             message.success("Xóa thành công");
         } catch (error) {
-            console.log(error);
             message.error(error?.response?.data?.message || "Xóa thất bại");
         }
     };
@@ -131,7 +129,6 @@ function SessionTab({ sessions, classId, onSessionChange }) {
 
             message.success("Cập nhật trạng thái thành công");
         } catch (error) {
-            console.log(error);
             message.error(error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật trạng thái phiên học");
         }
     };
@@ -156,8 +153,6 @@ function SessionTab({ sessions, classId, onSessionChange }) {
             message.success("Import phiên học thành công");
 
         } catch (error) {
-            console.log(error);
-
             message.error(
                 error?.response?.data?.message ||
                 "Import thất bại"
@@ -199,8 +194,7 @@ function SessionTab({ sessions, classId, onSessionChange }) {
 
             message.success("Tải file mẫu thành công");
         } catch (error) {
-            console.log(error);
-            message.error("Tải file mẫu thất bại");
+            message.error(error?.response?.data?.message || "Tải file mẫu thất bại");
         } finally {
             setDownloading(false);
         }

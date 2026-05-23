@@ -68,8 +68,6 @@ function Login() {
 
             navigate("/classes");
         } catch (error) {
-            console.log(error);
-
             message.error(
                 error?.response?.data?.message ||
                 "Đăng nhập thất bại"

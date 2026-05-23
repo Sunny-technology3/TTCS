@@ -120,7 +120,6 @@ function SessionCameraPage() {
 
             message.success("Cập nhật trạng thái phiên học thành công");
         } catch (error) {
-            console.log(error);
             message.error(
                 error?.response?.data?.message ||
                 "Có lỗi xảy ra khi cập nhật trạng thái phiên học"

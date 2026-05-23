@@ -39,7 +39,6 @@ function AppHeader() {
 
         setLecturer(res.data.data);
       } catch (error) {
-        console.log(error);
         message.error(error?.response?.data?.message || "Lỗi khi lấy thông tin người dùng");
       }
     };
@@ -63,7 +62,6 @@ function AppHeader() {
       setOpenChangePassword(false);
       form.resetFields();
     } catch (error) {
-      console.log(error);
       message.error(
         error?.response?.data?.message ||
         "Đổi mật khẩu thất bại"

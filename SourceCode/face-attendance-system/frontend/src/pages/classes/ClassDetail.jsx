@@ -91,7 +91,6 @@ function ClassDetail() {
 
             setOpen(false);
         } catch (error) {
-            console.log(error);
             message.error(
                 error?.response?.data?.message ||
                 "Cập nhật lớp học thất bại"
@@ -139,7 +138,6 @@ function ClassDetail() {
 
             message.success("Xuất danh sách điểm danh thành công");
         } catch (error) {
-            console.log(error);
             message.error(error?.response?.data?.message || "Xuất danh sách điểm danh thất bại");
         } finally {
             setExporting(false);

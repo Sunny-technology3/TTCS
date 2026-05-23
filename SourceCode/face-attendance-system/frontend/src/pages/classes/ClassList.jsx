@@ -64,7 +64,6 @@ function ClassList() {
       form.resetFields();
 
     } catch (error) {
-      console.log(error);
       message.error(error?.response?.data?.message || "Thao tác thất bại");
     }
   };
@@ -79,7 +78,6 @@ function ClassList() {
 
       message.success("Xóa lớp học thành công");
     } catch (error) {
-      console.log(error);
       message.error(error?.response?.data?.message || "Xóa lớp học thất bại");
     }
   };

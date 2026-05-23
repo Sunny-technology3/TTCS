@@ -63,7 +63,7 @@ function StudentTab({ students, classId, onStudentChange }) {
 
     const handleSubmit = async (values) => {
         setLoadingSubmit(true);
-        console.log(values)
+
         try {
             const formData = new FormData();
 
@@ -107,7 +107,6 @@ function StudentTab({ students, classId, onStudentChange }) {
             form.resetFields();
             setEditing(null);
         } catch (error) {
-            console.log(error);
             message.error(error?.response?.data?.message || "Có lỗi xảy ra");
         } finally {
             setLoadingSubmit(false);
@@ -123,10 +122,9 @@ function StudentTab({ students, classId, onStudentChange }) {
             setData(newData);
             onStudentChange?.(newData);
 
-            message.success("Xóa thành công");
+            message.success("Xóa sinh viên thành công");
         } catch (error) {
-            console.log(error);
-            message.error(error?.response?.data?.message || "Xóa thất bại");
+            message.error(error?.response?.data?.message || "Xóa sinh viên thất bại");
         }
     };
 
@@ -200,7 +198,6 @@ function StudentTab({ students, classId, onStudentChange }) {
 
             importForm.resetFields();
         } catch (error) {
-            console.log(error);
             message.error(
                 error?.response?.data?.message ||
                 "Import thất bại"
