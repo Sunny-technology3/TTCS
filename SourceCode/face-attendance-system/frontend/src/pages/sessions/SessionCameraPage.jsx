@@ -321,6 +321,16 @@ function SessionCameraPage() {
                                         alignItems: "center"
                                     }}
                                 >
+                                    {sessionData?.status === "not_started" && (
+                                        <Empty
+                                            description={
+                                                <span style={{ color: "#ffffff" }}>
+                                                    Phiên học chưa bắt đầu
+                                                </span>
+                                            }
+                                        />
+                                    )}
+
                                     {
                                         sessionData?.status === "in_progress" &&
                                         classData?.cameraUrl && (
@@ -344,7 +354,13 @@ function SessionCameraPage() {
                                     }
 
                                     {sessionData?.status === "finished" && (
-                                        <Empty description="Phiên học đã kết thúc" />
+                                        <Empty
+                                            description={
+                                                <span style={{ color: "#ffffff" }}>
+                                                    Phiên học đã kết thúc
+                                                </span>
+                                            }
+                                        />
                                     )}
                                 </div>
                             </Card>

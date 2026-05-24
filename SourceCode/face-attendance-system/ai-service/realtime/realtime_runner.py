@@ -1,14 +1,35 @@
+import os
 import cv2
 import requests
 import time
 import numpy as np
+
 from datetime import datetime, timezone
 
-from services.recognition_service import cosine_similarity
+from services.recognition_service import cosine_similarity_matrix
 from core.face_embedding import get_embedding
 from core.runtime_state import running_flags
 
 THRESHOLD = 0.45
+
+BACKEND_URL = os.getenv(
+    "BACKEND_URL",
+    "http://localhost:8080"
+)
+
+http = requests.Session()
+
+# Detect mỗi N frame để giảm tải
+PROCESS_EVERY_N_FRAMES = 3
+
+# Số frame liên tiếp cần match
+REQUIRED_CONSECUTIVE_MATCHES = 3
+
+# Cooldown check-in
+CHECKIN_COOLDOWN = 10
+
+# Refresh attendance state
+SYNC_INTERVAL = 10
 
 face_detector = cv2.FaceDetectorYN.create(
     "models/face_detection_yunet_2023mar.onnx",
@@ -18,8 +39,8 @@ face_detector = cv2.FaceDetectorYN.create(
 
 def get_checked_students(class_id, session_id, token):
     try:
-        res = requests.get(
-            "http://localhost:8080/api/attendances/session",
+        res = http.get(
+            f"{BACKEND_URL}/api/attendances/session",
             params={
                 "classId": class_id,
                 "sessionId": session_id
@@ -32,44 +53,55 @@ def get_checked_students(class_id, session_id, token):
 
         rows = res.json()["data"]
 
-        checked_students = set()
-
-        student_map = {}
+        checked_student_ids = set()
 
         for item in rows:
-
-            student_map[item["_id"]] = item["studentId"]
-
             if item["status"] != "absent":
-                checked_students.add(item["_id"])
+                checked_student_ids.add(
+                    item["studentId"]
+                )
 
-        return checked_students, student_map
-    
+        return checked_student_ids
+
     except Exception as e:
-        print("Lỗi khi lấy dữ liệu điểm dang:", e)
+        print("Lỗi khi lấy dữ liệu điểm danh:", e)
 
-        return set(), {}
-    
+        return set()
+
+def auto_finish_session(session_id, class_id, token):
+    try:
+        http.put(
+            f"{BACKEND_URL}/api/sessions/{session_id}/status",
+            json={
+                "status": "finished"
+            },
+            headers={
+                "Authorization": f"Bearer {token}"
+            },
+            timeout=5
+        )
+
+    except Exception as e:
+        print("Lỗi khi kết thúc phiên học:", e)
+
+    finally:
+        running_flags[class_id] = False
+
 def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
     # Mở camera
     cap = cv2.VideoCapture(camera_url)
 
     if not cap.isOpened():
         print("Không thể mở camera:", camera_url)
-        return
-
-    last_check_in = {}
-
-    checked_students, student_map = get_checked_students(
-        class_id,
-        session_id,
-        token
-    )
+        time.sleep(5)
 
     try:
         # Lấy embedding của sinh viên
-        res = requests.get(
-            f"http://localhost:8080/api/students/embeddings?classId={class_id}",
+        res = http.get(
+            f"{BACKEND_URL}/api/students/embeddings",
+            params={
+                "classId": class_id
+            },
             headers={
                 "Authorization": f"Bearer {token}"
             },
@@ -82,13 +114,68 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
         print("Không tìm thấy embeddings của sinh viên:", e)
         return
 
+    if len(embeddings) == 0:
+        print("Không có embeddings")
+        return
+    
     total_students = len(embeddings)
 
     print("Tổng số sinh viên:", total_students)
 
+    checked_student_ids = get_checked_students(
+        class_id,
+        session_id,
+        token
+    )
+
+    # Matrix embeddings
+    embedding_matrix = np.array([
+        item["embedding"]
+        for item in embeddings
+    ], dtype=np.float32)
+
+    matrix_norms = np.linalg.norm(
+        embedding_matrix,
+        axis=1,
+        keepdims=True
+    )
+
+    matrix_norms[matrix_norms == 0] = 1
+
+    embedding_matrix = embedding_matrix / matrix_norms
+
+    mongo_student_ids = [
+        item["_id"]
+        for item in embeddings
+    ]
+
+    # Label hiển thị
+    student_labels = {
+        item["_id"]: item["studentId"]
+        for item in embeddings
+    }
+
     end_dt = datetime.fromisoformat(
         end_time.replace("Z", "+00:00")
     )
+
+    frame_count = 0
+
+    last_check_in = {}
+
+    recognition_counter = {}
+
+    last_sync = time.time()
+
+    prev_time = time.time()
+
+    fail_count = 0
+
+    fps = 0
+
+    last_best_match = None
+    last_best_score = -1
+    last_detect_time = 0
 
     try:
         while running_flags.get(class_id, True):
@@ -98,173 +185,279 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
             if now >= end_dt:
                 print("Phiên học đã hết thời gian")
 
-                try:
-                    requests.put(
-                        f"http://localhost:8080/api/sessions/{session_id}/status",
-                        json={
-                            "status": "finished"
-                        },
-                        headers={
-                            "Authorization": f"Bearer {token}"
-                        },
-                        timeout=5
-                    )
-                except Exception as e:
-                    print("Lỗi auto finish:", e)
+                auto_finish_session(
+                    session_id,
+                    class_id,
+                    token
+                )
 
-                running_flags[class_id] = False
                 break
+
+            # REFRESH trạng thái điểm danh
+            if time.time() - last_sync > SYNC_INTERVAL:
+                checked_student_ids = get_checked_students(
+                    class_id,
+                    session_id,
+                    token
+                )
+
+                last_sync = time.time()
 
             ret, frame = cap.read()
 
             if not ret:
+                fail_count += 1
+
+                print("Không đọc được frame")
+
+                # Kết nối lại camera
+                if fail_count > 30:
+                    print("Đang reconnect camera...")
+
+                    cap.release()
+
+                    time.sleep(2)
+
+                    cap = cv2.VideoCapture(camera_url)
+
+                    fail_count = 0
+
                 continue
+
+            fail_count = 0
+
+            frame_count += 1
 
             h, w = frame.shape[:2]
 
-            # update size cho YuNet
-            face_detector.setInputSize((w, h))
+            # FPS
+            current_time = time.time()
 
-            best_match = None
-            best_score = -1
+            delta = current_time - prev_time
 
-            # detect face
-            _, faces = face_detector.detect(frame)
+            instant_fps = 1 / delta if delta > 0 else 0
 
-            if faces is not None:
-                for face in faces:
-                    # Crop khuôn mặt
-                    x, y, fw, fh = face[:4].astype(int)
+            fps = 0.9 * fps + 0.1 * instant_fps
 
-                    confidence = face[-1]
+            prev_time = current_time
 
-                    if confidence < 0.8:
-                        continue
+            scale_x = w / 640
+            scale_y = h / 360
 
-                    if fw < 60 or fh < 60:
-                        continue
+            current_best_match = last_best_match
+            current_best_score = last_best_score
 
-                    x = max(0, x)
-                    y = max(0, y)
+            if frame_count % PROCESS_EVERY_N_FRAMES == 0:
+                # Resize frame
+                resized_frame = cv2.resize(
+                    frame,
+                    (640, 360)
+                )
 
-                    fw = min(fw, w - x)
-                    fh = min(fh, h - y)
+                # update size cho YuNet
+                face_detector.setInputSize((640, 360))
 
-                    face_crop = frame[y:y+fh, x:x+fw]
+                # detect face
+                _, faces = face_detector.detect(resized_frame)
 
-                    try:
-                        emb = get_embedding(face_crop)
+                if faces is not None:
+                    detected_students = set()
 
-                    except Exception as e:
-                        print("Lỗi khi tạo embedding:", e)
-                        continue
+                    for face in faces:
+                        # Crop khuôn mặt
+                        x, y, fw, fh = face[:4].astype(int)
 
-                    if emb is None:
-                        continue
+                        confidence = face[-1]
 
-                    current_best_match = None
-                    current_best_score = -1
+                        if confidence < 0.8:
+                            continue
 
-                    for item in embeddings:
-                        mongo_student_id = item["studentId"]
+                        # Scale về frame gốc
+                        x = int(x * scale_x)
+                        y = int(y * scale_y)
 
-                        db_emb = np.array(item["embedding"])
+                        fw = int(fw * scale_x)
+                        fh = int(fh * scale_y)
 
-                        sim = cosine_similarity(emb, db_emb)
+                        if fw < 60 or fh < 60:
+                            continue
 
-                        if sim > current_best_score:
-                            current_best_score = sim
-                            current_best_match = mongo_student_id
+                        x = max(0, x)
+                        y = max(0, y)
 
-                    is_match = current_best_score > THRESHOLD
+                        fw = min(fw, w - x)
+                        fh = min(fh, h - y)
 
-                    color = (
-                        (0, 255, 0)
-                        if is_match
-                        else (0, 0, 255)
-                    )
+                        face_crop = frame[y:y+fh, x:x+fw]
 
-                    display_student = (
-                        student_map.get(current_best_match)
-                        if current_best_match
-                        else "Unknown"
-                    )
+                        try:
+                            emb = get_embedding(face_crop)
 
-                    # Vẽ khung mặt
-                    cv2.rectangle(
-                        frame,
-                        (x, y),
-                        (x + fw, y + fh),
-                        color,
-                        2
-                    )
+                        except Exception as e:
+                            print("Lỗi khi tạo embedding:", e)
+                            continue
 
-                    label = (
-                        f"{display_student} - CHECKED"
-                        if current_best_match in checked_students
-                        else f"{display_student} ({current_best_score:.2f})"
-                    )
-                    # Label phía trên mặt
-                    cv2.putText(
-                        frame,
-                        label,
-                        (x, y - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7,
-                        color,
-                        2
-                    )
+                        if emb is None:
+                            continue
 
-                    # Lưu best global
-                    if current_best_score > best_score:
-                        best_score = current_best_score
-                        best_match = current_best_match
+                        norm = np.linalg.norm(emb)
 
-            # Tự động check-in
-            if best_score > THRESHOLD and best_match and best_match not in checked_students:
-                now = time.time()
+                        if norm == 0:
+                            continue
 
-                # Chặn spam check-in
-                if (
-                    best_match not in last_check_in
-                    or now - last_check_in[best_match] > 5
-                ):
+                        emb = emb / norm
 
-                    print(
-                        "Đã nhận diện:",
-                        student_map.get(best_match, best_match)
-                    )
-
-                    try:
-                        requests.post(
-                            f"http://localhost:8080/api/attendances/auto-check-in?classId={class_id}",
-                            json={
-                                "studentId": best_match
-                            },
-                            headers={
-                                "Authorization": f"Bearer {token}"
-                            },
-                            timeout=3
+                        sims = cosine_similarity_matrix(
+                            embedding_matrix,
+                            emb
                         )
-                    except Exception as e:
-                        print("Lỗi gọi api check-in:", e)
 
-                    checked_students.add(best_match)
+                        best_idx = np.argmax(sims)
 
-                    last_check_in[best_match] = now
+                        score = float(
+                            sims[best_idx]
+                        )
+
+                        student_id = mongo_student_ids[
+                            best_idx
+                        ]
+
+                        is_match = (
+                            score >= THRESHOLD
+                        )
+
+                        if is_match:
+                            detected_students.add(student_id)
+
+                            recognition_counter[
+                                student_id
+                            ] = recognition_counter.get(
+                                student_id,
+                                0
+                            ) + 1
+
+                        color = (
+                            (0, 255, 0)
+                            if is_match
+                            else (0, 0, 255)
+                        )
+
+                        display_student = (
+                            student_labels.get(
+                                student_id,
+                                "Unknown"
+                            )
+                        )
+
+                        # Vẽ khung mặt
+                        cv2.rectangle(
+                            frame,
+                            (x, y),
+                            (x + fw, y + fh),
+                            color,
+                            2
+                        )
+
+                        label = (
+                            f"{display_student} "
+                            f"({score:.2f})"
+                        )
+
+                        if student_id in checked_student_ids:
+                            label += " - CHECKED"
+
+                        # Label phía trên mặt
+                        cv2.putText(
+                            frame,
+                            label,
+                            (x, y - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7,
+                            color,
+                            2
+                        )
+
+                        # Tự động check-in
+                        if (
+                            is_match
+                            and recognition_counter.get(
+                                student_id,
+                                0
+                            ) >= REQUIRED_CONSECUTIVE_MATCHES
+                            and student_id not in checked_student_ids
+                        ):
+                            now_ts = time.time()
+
+                            if (
+                                student_id not in last_check_in
+                                or now_ts - last_check_in[student_id]
+                                > CHECKIN_COOLDOWN
+                            ):
+                                print("Đã nhận diện:", display_student)
+
+                                try:
+                                    response = http.post(
+                                        f"{BACKEND_URL}/api/attendances/auto-check-in",
+                                        params={
+                                            "classId": class_id
+                                        },
+                                        json={
+                                            "studentId": student_id
+                                        },
+                                        headers={
+                                            "Authorization": f"Bearer {token}"
+                                        },
+                                        timeout=3
+                                    )
+
+                                    if response.ok:
+                                        checked_student_ids.add(student_id)
+
+                                        last_check_in[student_id] = now_ts
+                                    else:
+                                        print(
+                                            "Check-in failed:",
+                                            response.text
+                                        )
+
+                                except Exception as e:
+                                    print("Check-in error:", e)
+
+                        if score > current_best_score:
+                            current_best_score = score
+                            current_best_match = student_id
+
+                    for sid in list(recognition_counter.keys()):
+                        if sid not in detected_students:
+                            recognition_counter[sid] = max(
+                                recognition_counter[sid] - 1,
+                                0
+                            )
+
+                    last_best_match = current_best_match
+                    last_best_score = current_best_score
+                    last_detect_time = time.time()
+
+            if time.time() - last_detect_time > 2:
+                last_best_match = None
+                last_best_score = -1
 
             # Hiện giao diện
-            is_match = best_score > THRESHOLD
-
             overlay_color = (
                 (0, 255, 0)
-                if is_match
+                if last_best_score >= THRESHOLD
                 else (0, 0, 255)
+            )
+
+            display_student = (
+                student_labels.get(last_best_score)
+                if last_best_score
+                else "Unknown"
             )
 
             label = (
                 "MATCH"
-                if is_match
+                if last_best_score >= THRESHOLD
                 else "NO MATCH"
             )
 
@@ -275,12 +468,6 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
                 (450, 220),
                 (20, 20, 20),
                 -1
-            )
-
-            display_student = (
-                student_map.get(best_match)
-                if best_match
-                else "Unknown"
             )
 
             cv2.putText(
@@ -295,7 +482,7 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
 
             cv2.putText(
                 frame,
-                f"Similarity: {best_score:.3f}",
+                f"Similarity: {last_best_score:.3f}",
                 (20, 85),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
@@ -341,7 +528,7 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
 
             # Độ dài thanh similarity
             fill_width = int(
-                bar_width * min(max(best_score, 0), 1)
+                bar_width * min(max(last_best_score, 0), 1)
             )
 
             # Vẽ thanh similarity
@@ -369,7 +556,7 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
             # Thống kê
             cv2.putText(
                 frame,
-                f"Checked: {len(checked_students)}/{total_students}",
+                f"Checked: {len(checked_student_ids)}/{total_students}",
                 (20, 210),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.7,
@@ -378,12 +565,12 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
             )
 
             # Tự động dừng khi đủ sinh viên
-            # if len(checked_students) == total_students:
+            # if len(checked_student_ids) == total_students:
             #     print("Tất cả sinh viên đã điểm danh")
 
             #     running_flags[class_id] = False
 
-            if len(checked_students) == total_students:
+            if len(checked_student_ids) == total_students:
                 cv2.putText(
                     frame,
                     "Da diem danh day du",
@@ -394,8 +581,25 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
                     3
                 )
 
+            # FPS
+            cv2.putText(
+                frame,
+                f"FPS: {fps:.1f}",
+                (20, 290),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 255, 0),
+                2
+            )
+
             # STREAM FRAME sang React
-            _, buffer = cv2.imencode(".jpg", frame)
+            success, buffer = cv2.imencode(
+                ".jpg",
+                frame
+            )
+
+            if not success:
+                continue
 
             frame_bytes = buffer.tobytes()
 
