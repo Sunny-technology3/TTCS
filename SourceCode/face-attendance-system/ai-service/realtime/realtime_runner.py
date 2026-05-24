@@ -5,9 +5,9 @@ import time
 import numpy as np
 
 from datetime import datetime, timezone
+from deep_sort_realtime.deepsort_tracker import DeepSort
 
-from services.recognition_service import cosine_similarity_matrix
-from core.face_embedding import get_embedding
+from services.recognition_service import recognize_face
 from core.runtime_state import running_flags
 
 THRESHOLD = 0.45
@@ -20,16 +20,22 @@ BACKEND_URL = os.getenv(
 http = requests.Session()
 
 # Detect mỗi N frame để giảm tải
-PROCESS_EVERY_N_FRAMES = 3
+PROCESS_EVERY_N_FRAMES = 5
 
-# Số frame liên tiếp cần match
-REQUIRED_CONSECUTIVE_MATCHES = 3
+# Số frame liên tiếp để xác nhận track
+MIN_TRACK_AGE = 3
 
 # Cooldown check-in
 CHECKIN_COOLDOWN = 10
 
-# Refresh attendance state
+# Refresh trạng thái điểm danh
 SYNC_INTERVAL = 10
+
+# Retry recognize cho track chưa match
+RECOGNIZE_INTERVAL = 2
+
+# Re-recognize định kỳ để tránh tracker drift
+TRACK_RECHECK_INTERVAL = 5
 
 face_detector = cv2.FaceDetectorYN.create(
     "models/face_detection_yunet_2023mar.onnx",
@@ -94,6 +100,7 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
     if not cap.isOpened():
         print("Không thể mở camera:", camera_url)
         time.sleep(5)
+        return
 
     try:
         # Lấy embedding của sinh viên
@@ -163,8 +170,6 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
 
     last_check_in = {}
 
-    recognition_counter = {}
-
     last_sync = time.time()
 
     prev_time = time.time()
@@ -177,6 +182,25 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
     last_best_score = -1
     last_detect_time = 0
 
+    # update size cho YuNet
+    face_detector.setInputSize((640, 360))
+    
+    # Khởi tạo tracker
+    tracker = DeepSort(
+        max_age=15,
+        n_init=2,
+        max_cosine_distance=0.3
+    )
+
+    track_id_to_student = {}
+    track_id_to_score = {}
+
+    # Lưu thời điểm recognize gần nhất của track
+    track_id_last_recognize = {}
+
+    # Lưu thời điểm verify danh tính gần nhất
+    track_id_last_verified = {}
+    
     try:
         while running_flags.get(class_id, True):
             # Auto stop khi hết giờ
@@ -200,6 +224,13 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
                     session_id,
                     token
                 )
+
+                # Cleanup cache check-in cũ
+                last_check_in = {
+                    k: v
+                    for k, v in last_check_in.items()
+                    if time.time() - v < 3600
+                }
 
                 last_sync = time.time()
 
@@ -244,8 +275,8 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
             scale_x = w / 640
             scale_y = h / 360
 
-            current_best_match = last_best_match
-            current_best_score = last_best_score
+            current_best_match = None
+            current_best_score = -1
 
             if frame_count % PROCESS_EVERY_N_FRAMES == 0:
                 # Resize frame
@@ -254,15 +285,12 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
                     (640, 360)
                 )
 
-                # update size cho YuNet
-                face_detector.setInputSize((640, 360))
-
                 # detect face
                 _, faces = face_detector.detect(resized_frame)
 
-                if faces is not None:
-                    detected_students = set()
+                detections = []
 
+                if faces is not None:
                     for face in faces:
                         # Crop khuôn mặt
                         x, y, fw, fh = face[:4].astype(int)
@@ -288,156 +316,201 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
                         fw = min(fw, w - x)
                         fh = min(fh, h - y)
 
-                        face_crop = frame[y:y+fh, x:x+fw]
-
-                        try:
-                            emb = get_embedding(face_crop)
-
-                        except Exception as e:
-                            print("Lỗi khi tạo embedding:", e)
-                            continue
-
-                        if emb is None:
-                            continue
-
-                        norm = np.linalg.norm(emb)
-
-                        if norm == 0:
-                            continue
-
-                        emb = emb / norm
-
-                        sims = cosine_similarity_matrix(
-                            embedding_matrix,
-                            emb
-                        )
-
-                        best_idx = np.argmax(sims)
-
-                        score = float(
-                            sims[best_idx]
-                        )
-
-                        student_id = mongo_student_ids[
-                            best_idx
-                        ]
-
-                        is_match = (
-                            score >= THRESHOLD
-                        )
-
-                        if is_match:
-                            detected_students.add(student_id)
-
-                            recognition_counter[
-                                student_id
-                            ] = recognition_counter.get(
-                                student_id,
-                                0
-                            ) + 1
-
-                        color = (
-                            (0, 255, 0)
-                            if is_match
-                            else (0, 0, 255)
-                        )
-
-                        display_student = (
-                            student_labels.get(
-                                student_id,
-                                "Unknown"
+                        detections.append(
+                            (
+                                [x, y, fw, fh],
+                                confidence,
+                                "face"
                             )
                         )
 
-                        # Vẽ khung mặt
-                        cv2.rectangle(
-                            frame,
-                            (x, y),
-                            (x + fw, y + fh),
-                            color,
-                            2
-                        )
+                tracks = tracker.update_tracks(
+                    detections,
+                    frame=frame
+                )
 
-                        label = (
-                            f"{display_student} "
-                            f"({score:.2f})"
-                        )
-
-                        if student_id in checked_student_ids:
-                            label += " - CHECKED"
-
-                        # Label phía trên mặt
-                        cv2.putText(
-                            frame,
-                            label,
-                            (x, y - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.7,
-                            color,
-                            2
-                        )
-
-                        # Tự động check-in
-                        if (
-                            is_match
-                            and recognition_counter.get(
-                                student_id,
-                                0
-                            ) >= REQUIRED_CONSECUTIVE_MATCHES
-                            and student_id not in checked_student_ids
-                        ):
-                            now_ts = time.time()
-
-                            if (
-                                student_id not in last_check_in
-                                or now_ts - last_check_in[student_id]
-                                > CHECKIN_COOLDOWN
-                            ):
-                                print("Đã nhận diện:", display_student)
-
-                                try:
-                                    response = http.post(
-                                        f"{BACKEND_URL}/api/attendances/auto-check-in",
-                                        params={
-                                            "classId": class_id
-                                        },
-                                        json={
-                                            "studentId": student_id
-                                        },
-                                        headers={
-                                            "Authorization": f"Bearer {token}"
-                                        },
-                                        timeout=3
-                                    )
-
-                                    if response.ok:
-                                        checked_student_ids.add(student_id)
-
-                                        last_check_in[student_id] = now_ts
-                                    else:
-                                        print(
-                                            "Check-in failed:",
-                                            response.text
-                                        )
-
-                                except Exception as e:
-                                    print("Check-in error:", e)
-
-                        if score > current_best_score:
-                            current_best_score = score
-                            current_best_match = student_id
-
-                    for sid in list(recognition_counter.keys()):
-                        if sid not in detected_students:
-                            recognition_counter[sid] = max(
-                                recognition_counter[sid] - 1,
-                                0
-                            )
-
-                    last_best_match = current_best_match
-                    last_best_score = current_best_score
+                if faces is not None and len(faces) > 0:
                     last_detect_time = time.time()
 
+                active_track_ids = set()
+
+                for track in tracks:
+                    if track.is_confirmed():
+                        active_track_ids.add(track.track_id)
+
+                track_id_to_student = {
+                    k: v
+                    for k, v in track_id_to_student.items()
+                    if k in active_track_ids
+                }
+
+                track_id_to_score = {
+                    k: v
+                    for k, v in track_id_to_score.items()
+                    if k in active_track_ids
+                }
+
+                track_id_last_recognize = {
+                    k: v
+                    for k, v in track_id_last_recognize.items()
+                    if k in active_track_ids
+                }
+
+                track_id_last_verified = {
+                    k: v
+                    for k, v in track_id_last_verified.items()
+                    if k in active_track_ids
+                }
+
+                for track in tracks:
+                    if not track.is_confirmed():
+                        continue
+
+                    track_id = track.track_id
+
+                    ltrb = track.to_ltrb()
+
+                    x1, y1, x2, y2 = map(int, ltrb)
+
+                    fw = x2 - x1
+                    fh = y2 - y1
+
+                    if fw <= 0 or fh <= 0:
+                        continue
+
+                    x1 = max(0, x1)
+                    y1 = max(0, y1)
+
+                    x2 = min(w, x2)
+                    y2 = min(h, y2)
+
+                    face_crop = frame[y1:y2, x1:x2]
+
+                    if face_crop.size == 0:
+                        continue
+
+                    # Chỉ recognize track mới
+                    should_recognize = (
+                        (
+                            track_id not in track_id_to_student
+                            or time.time() - track_id_last_verified.get(
+                                track_id,
+                                0
+                            ) > TRACK_RECHECK_INTERVAL
+                        )
+                        and (
+                            track_id not in track_id_last_recognize
+                            or time.time() - track_id_last_recognize[track_id]
+                            > RECOGNIZE_INTERVAL
+                        )
+                    )
+
+                    if should_recognize and track.hits >= MIN_TRACK_AGE:
+                        track_id_last_recognize[track_id] = time.time()
+
+                        result = recognize_face(
+                            face_crop=face_crop,
+                            embedding_matrix=embedding_matrix,
+                            mongo_student_ids=mongo_student_ids,
+                            threshold=THRESHOLD
+                        )
+
+                        if result and result.get("matched"):
+                            student_id = result["student_id"]
+
+                            track_id_to_student[track_id] = student_id
+
+                            track_id_to_score[track_id] = result["score"]
+
+                            track_id_last_verified[track_id] = time.time()
+
+                        else:
+                            track_id_to_student.pop(track_id, None)
+                            track_id_to_score.pop(track_id, None)
+
+                    student_id = track_id_to_student.get(track_id)
+
+                    score = track_id_to_score.get(track_id, 0)
+
+                    if student_id is None:
+                        continue
+
+                    if score >= THRESHOLD and score > current_best_score:
+                        current_best_score = score
+                        current_best_match = student_id
+
+                    display_student = student_labels.get(
+                        student_id,
+                        "Unknown"
+                    )
+
+                    color = (0, 255, 0)
+
+                    cv2.rectangle(
+                        frame,
+                        (x1, y1),
+                        (x2, y2),
+                        color,
+                        2
+                    )
+
+                    label = f"{display_student} ({score:.2f})"
+
+                    if student_id in checked_student_ids:
+                        label += " - CHECKED"
+
+                    cv2.putText(
+                        frame,
+                        label,
+                        (x1, y1 - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        color,
+                        2
+                    )
+
+                    # Auto check-in
+                    if (
+                        track.hits >= MIN_TRACK_AGE
+                        and student_id not in checked_student_ids
+                    ):
+                        now_ts = time.time()
+
+                        if (
+                            student_id not in last_check_in
+                            or now_ts - last_check_in[student_id]
+                            > CHECKIN_COOLDOWN
+                        ):
+
+                            print("Đã nhận diện:", display_student)
+
+                            try:
+                                response = http.post(
+                                    f"{BACKEND_URL}/api/attendances/auto-check-in",
+                                    params={
+                                        "classId": class_id
+                                    },
+                                    json={
+                                        "studentId": student_id
+                                    },
+                                    headers={
+                                        "Authorization": f"Bearer {token}"
+                                    },
+                                    timeout=3
+                                )
+
+                                if response.ok:
+                                    checked_student_ids.add(student_id)
+
+                                    last_check_in[student_id] = now_ts
+
+                            except Exception as e:
+                                print("Check-in error:", e)
+
+                last_best_match = current_best_match
+                last_best_score = current_best_score
+            
+            # Reset overlay nếu lâu không detect
             if time.time() - last_detect_time > 2:
                 last_best_match = None
                 last_best_score = -1
@@ -450,8 +523,8 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
             )
 
             display_student = (
-                student_labels.get(last_best_score)
-                if last_best_score
+                student_labels.get(last_best_match)
+                if last_best_match
                 else "Unknown"
             )
 
