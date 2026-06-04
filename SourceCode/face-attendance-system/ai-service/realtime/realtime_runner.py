@@ -20,7 +20,7 @@ BACKEND_URL = os.getenv(
 http = requests.Session()
 
 # Detect mỗi N frame để giảm tải
-PROCESS_EVERY_N_FRAMES = 5
+PROCESS_EVERY_N_FRAMES = 1
 
 # Số frame liên tiếp để xác nhận track
 MIN_TRACK_AGE = 3
@@ -136,29 +136,24 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
     )
 
     # Matrix embeddings
-    embedding_matrix = np.array([
-        item["embedding"]
-        for item in embeddings
-    ], dtype=np.float32)
+    all_embeddings = []
+    mongo_student_ids = []
 
-    matrix_norms = np.linalg.norm(
-        embedding_matrix,
-        axis=1,
-        keepdims=True
+    for item in embeddings:
+        student_id = item["studentId"]
+
+        for emb in item["embeddings"]:
+            all_embeddings.append(emb)
+            mongo_student_ids.append(student_id)
+
+    embedding_matrix = np.array(
+        all_embeddings,
+        dtype=np.float32
     )
-
-    matrix_norms[matrix_norms == 0] = 1
-
-    embedding_matrix = embedding_matrix / matrix_norms
-
-    mongo_student_ids = [
-        item["_id"]
-        for item in embeddings
-    ]
 
     # Label hiển thị
     student_labels = {
-        item["_id"]: item["studentId"]
+        item["studentId"]: item["studentCode"]
         for item in embeddings
     }
 
@@ -187,13 +182,17 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
     
     # Khởi tạo tracker
     tracker = DeepSort(
-        max_age=15,
+        max_age=3,
         n_init=2,
         max_cosine_distance=0.3
     )
 
+    # Lưu studentId gần nhất
     track_id_to_student = {}
     track_id_to_score = {}
+
+    # Lưu box gần nhất
+    track_id_to_box = {}
 
     # Lưu thời điểm recognize gần nhất của track
     track_id_last_recognize = {}
@@ -324,19 +323,21 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
                             )
                         )
 
-                tracks = tracker.update_tracks(
-                    detections,
-                    frame=frame
-                )
+                tracks = tracker.update_tracks(detections, frame=frame)
 
-                if faces is not None and len(faces) > 0:
-                    last_detect_time = time.time()
+                if len(tracks) == 0:
+                    track_id_to_box.clear()
+                    track_id_to_student.clear()
+                    track_id_to_score.clear()
+                    track_id_last_recognize.clear()
+                    track_id_last_verified.clear()
+                    continue
 
-                active_track_ids = set()
-
-                for track in tracks:
-                    if track.is_confirmed():
-                        active_track_ids.add(track.track_id)
+                active_track_ids = {
+                    track.track_id
+                    for track in tracks
+                    if track.is_confirmed()
+                }
 
                 track_id_to_student = {
                     k: v
@@ -362,7 +363,20 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
                     if k in active_track_ids
                 }
 
+                track_id_to_box = {
+                    k: v
+                    for k, v in track_id_to_box.items()
+                    if k in active_track_ids
+                }
+
                 for track in tracks:
+                    if len(active_track_ids) == 0:
+                        track_id_to_box.clear()
+                        track_id_to_student.clear()
+                        track_id_to_score.clear()
+                        track_id_last_recognize.clear()
+                        track_id_last_verified.clear()
+
                     if not track.is_confirmed():
                         continue
 
@@ -370,13 +384,16 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
 
                     ltrb = track.to_ltrb()
 
-                    x1, y1, x2, y2 = map(int, ltrb)
-
+                    x1, y1, x2, y2 = map(int, ltrb)                        
+                    
                     fw = x2 - x1
                     fh = y2 - y1
 
                     if fw <= 0 or fh <= 0:
                         continue
+
+                    if track.is_confirmed():
+                        track_id_to_box[track_id] = (x1, y1, x2, y2)
 
                     x1 = max(0, x1)
                     y1 = max(0, y1)
@@ -424,10 +441,6 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
 
                             track_id_last_verified[track_id] = time.time()
 
-                        else:
-                            track_id_to_student.pop(track_id, None)
-                            track_id_to_score.pop(track_id, None)
-
                     student_id = track_id_to_student.get(track_id)
 
                     score = track_id_to_score.get(track_id, 0)
@@ -438,36 +451,6 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
                     if score >= THRESHOLD and score > current_best_score:
                         current_best_score = score
                         current_best_match = student_id
-
-                    display_student = student_labels.get(
-                        student_id,
-                        "Unknown"
-                    )
-
-                    color = (0, 255, 0)
-
-                    cv2.rectangle(
-                        frame,
-                        (x1, y1),
-                        (x2, y2),
-                        color,
-                        2
-                    )
-
-                    label = f"{display_student} ({score:.2f})"
-
-                    if student_id in checked_student_ids:
-                        label += " - CHECKED"
-
-                    cv2.putText(
-                        frame,
-                        label,
-                        (x1, y1 - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7,
-                        color,
-                        2
-                    )
 
                     # Auto check-in
                     if (
@@ -498,22 +481,66 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
                                     },
                                     timeout=3
                                 )
-
+                                
                                 if response.ok:
-                                    checked_student_ids.add(student_id)
+                                    checked_student_ids = get_checked_students(
+                                        class_id,
+                                        session_id,
+                                        token
+                                    )
 
                                     last_check_in[student_id] = now_ts
 
                             except Exception as e:
                                 print("Check-in error:", e)
 
-                last_best_match = current_best_match
-                last_best_score = current_best_score
+                if current_best_match is not None:
+                    last_best_match = current_best_match
+                    last_best_score = current_best_score
+                    last_detect_time = time.time()
             
             # Reset overlay nếu lâu không detect
-            if time.time() - last_detect_time > 2:
+            if time.time() - last_detect_time > 10:
                 last_best_match = None
                 last_best_score = -1
+
+            for track_id, student_id in track_id_to_student.items():
+                box = track_id_to_box.get(track_id)
+
+                if box is None:
+                    continue
+
+                x1, y1, x2, y2 = box
+
+                score = track_id_to_score.get(track_id, 0)
+
+                display_student = student_labels.get(
+                    student_id,
+                    "Unknown"
+                )
+
+                cv2.rectangle(
+                    frame,
+                    (x1, y1),
+                    (x2, y2),
+                    (0, 255, 0),
+                    2
+                )
+
+                label = f"{display_student} ({score:.2f})"
+
+                if student_id in checked_student_ids:
+                    label += " - CHECKED"
+
+                cv2.putText(
+                    frame,
+                    label,
+                    (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (0, 255, 0),
+                    2
+                )
 
             # Hiện giao diện
             overlay_color = (
@@ -626,7 +653,7 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
                 2
             )
 
-            # Thống kê
+             # Thống kê
             cv2.putText(
                 frame,
                 f"Checked: {len(checked_student_ids)}/{total_students}",

@@ -7,3 +7,7 @@ python-multipart
 requests
 flask
 deep-sort-realtime
+setuptools
+torch
+torchvision
+torchaudio
