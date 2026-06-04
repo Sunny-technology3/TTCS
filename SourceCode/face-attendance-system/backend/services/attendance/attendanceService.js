@@ -154,10 +154,7 @@ const autoCheckInService = async ({ classId, studentId }) => {
     });
 
     if (attendance && attendance.checkIn) {
-        return res.json({
-            success: true,
-            message: "Đã điểm danh",
-        });
+        return;
     }
 
     const now = new Date();

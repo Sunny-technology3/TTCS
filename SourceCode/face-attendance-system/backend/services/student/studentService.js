@@ -18,9 +18,16 @@ const getEmbeddingService = async (classId) => {
 
     const embeddings = await FaceEmbedding.find({
         studentId: { $in: studentIds },
-    });
+    })
+        .populate("studentId", "studentId")
+        .lean();
 
-    return embeddings;
+    return embeddings.map(item => ({
+        _id: item._id,
+        embeddings: item.embeddings,
+        studentId: item.studentId._id,
+        studentCode: item.studentId.studentId,
+    }));
 };
 
 const createStudentService = async ({ studentId, fullName, classId, lecturerId, file }) => {
@@ -80,7 +87,7 @@ const createStudentService = async ({ studentId, fullName, classId, lecturerId, 
                 [
                     {
                         studentId: newStudent[0]._id,
-                        embedding,
+                        embeddings: embedding,
                     }
                 ],
                 { session }
@@ -158,7 +165,7 @@ const updateStudentService = async ({
 
         await FaceEmbedding.findOneAndUpdate(
             { studentId: student._id },
-            { embedding }
+            { embeddings: embedding }
         );
     }
 
@@ -355,8 +362,7 @@ const importStudentsService = async ({
                     [
                         {
                             studentId: student[0]._id,
-                            embedding:
-                                aiRes.data.data.embedding,
+                            embeddings: aiRes.data.data.embedding,
                         }
                     ],
                     { session }

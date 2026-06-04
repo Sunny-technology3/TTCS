@@ -6,10 +6,9 @@ const faceEmbeddingSchema = new mongoose.Schema({
         ref: "Student",
         required: true,
     },
-    embedding: {
-        type: [Number],
-        required: true,
-    },
+    embeddings: [{
+        type: [Number]
+    }],
 }, { timestamps: true });
 
 const FaceEmbedding = mongoose.model("FaceEmbedding", faceEmbeddingSchema, "face_embeddings");

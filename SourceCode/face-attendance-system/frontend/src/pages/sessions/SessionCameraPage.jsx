@@ -69,7 +69,7 @@ function SessionCameraPage() {
         attendanceData,
         loading: attendanceLoading,
         refetch,
-    } = useAttendanceBySession(classId, sessionId);
+    } = useAttendanceBySession(classId, sessionId, null);
 
     const stats = {
         present: attendanceData?.filter(i => i.status === "present").length || 0,
@@ -312,7 +312,7 @@ function SessionCameraPage() {
                                 <div
                                     style={{
                                         width: "100%",
-                                        height: 600,
+                                        height: "100%",
                                         background: "#000",
                                         borderRadius: 8,
                                         overflow: "hidden",

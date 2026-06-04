@@ -106,7 +106,10 @@ def extract_embedding(image_bytes):
         np.linalg.norm(final_embedding)
     )
 
-    return final_embedding.tolist()
+    return [
+        emb.tolist()
+        for emb in embeddings
+    ]
 
 def get_embedding(frame):
     img = frame.copy()
