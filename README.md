@@ -52,24 +52,6 @@ cd SourceCode/face-attendance-system
 
 ---
 
-## Database
-
-Project đã được cấu hình sẵn MongoDB Atlas (cloud).
-
-Không cần cài MongoDB hoặc cấu hình thêm.
-
-Chỉ cần chạy project là sử dụng được ngay.
-
----
-
-## Cloud Storage
-
-Hệ thống sử dụng Cloudflare R2 để lưu trữ ảnh sinh viên và dữ liệu upload.
-
-Các file sau khi upload sẽ được truy cập thông qua public URL.
-
----
-
 ## Cài đặt & chạy hệ thống
 
 ---
@@ -102,6 +84,7 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 ### Bước 5: Download AI Models
+
 Do giới hạn của GitHub, các file model KHÔNG được commit vào repo.
 
 Vui lòng tải các file sau và đặt vào thư mục: ai-service/models/
@@ -157,7 +140,7 @@ ai-service/
 
 ---
 
-### Cấu hình Backend (.env)
+### Bước 6: Cấu hình Backend (.env)
 
 Tạo file `.env` trong thư mục `backend`:
 
@@ -174,6 +157,28 @@ R2_ENDPOINT=<Endpoint>
 R2_PUBLIC_URL=<Public URL>
 
 ```
+
+* Chú ý: Nếu không cấu hình .env, backend sẽ không thể chạy như mong đợi.
+
+---
+
+### Bước 7: Reset Database & tạo tài khoản mặc định
+
+Project có sẵn script để reset toàn bộ database và tạo tài khoản giảng viên mặc định.
+
+Ở thư mục gốc project:
+
+```bash
+npm run reset-db
+```
+
+Script sẽ thực hiện:
+* Xóa toàn bộ dữ liệu trong MongoDB
+* Tạo lại tài khoản giảng viên mặc định:
+```txt
+Username: GV001
+Password: 12345678
+``` 
 
 ---
 
@@ -253,12 +258,11 @@ uvicorn main:app --reload --port 8000
 
 ## Quy trình sử dụng
 
-1. Tạo lớp học
+1. Tạo lớp học và cấu hình camera URL
 2. Thêm sinh viên + upload ảnh (tạo embedding)
-3. Cấu hình camera URL
-4. Tạo phiên học (session)
-5. Nhấn **Bắt đầu** => hệ thống chạy AI realtime
-6. Nhấn **Kết thúc** để dừng
+3. Tạo phiên học (session)
+4. Nhấn **Bắt đầu** => hệ thống chạy AI realtime
+5. Nhấn **Kết thúc** để dừng
 
 ---
 
