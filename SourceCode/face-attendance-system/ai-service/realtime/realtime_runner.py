@@ -20,7 +20,7 @@ BACKEND_URL = os.getenv(
 http = requests.Session()
 
 # Detect mỗi N frame để giảm tải
-PROCESS_EVERY_N_FRAMES = 1
+PROCESS_EVERY_N_FRAMES = 5
 
 # Số frame liên tiếp để xác nhận track
 MIN_TRACK_AGE = 3
@@ -64,7 +64,7 @@ def get_checked_students(class_id, session_id, token):
         for item in rows:
             if item["status"] != "absent":
                 checked_student_ids.add(
-                    item["studentId"]
+                    item["_id"]
                 )
 
         return checked_student_ids
@@ -331,7 +331,6 @@ def generate_realtime_frames(class_id, session_id, camera_url, end_time, token):
                     track_id_to_score.clear()
                     track_id_last_recognize.clear()
                     track_id_last_verified.clear()
-                    continue
 
                 active_track_ids = {
                     track.track_id

@@ -163,15 +163,15 @@ Tạo file `.env` trong thư mục `backend`:
 
 ```env
 
-DB_URL=
+DB_URL=<MongoDB Connection String>
 
-secretKey=
+secretKey=<JWT Secret>
 
-R2_ACCESS_KEY_ID=
-R2_SECRET_ACCESS_KEY=
-R2_BUCKET_NAME=
-R2_ENDPOINT=
-R2_PUBLIC_URL=
+R2_ACCESS_KEY_ID=<Access Key>
+R2_SECRET_ACCESS_KEY=<Secret Key>
+R2_BUCKET_NAME=<Bucket Name>
+R2_ENDPOINT=<Endpoint>
+R2_PUBLIC_URL=<Public URL>
 
 ```
 
